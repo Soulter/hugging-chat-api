@@ -5,11 +5,11 @@ HuggingChat Python API
 [![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
 
 # How to Use?
-```
+```bash
 pip install hugchat
 ```
 
-```
+```py
 from hugchat import hugchat
 chatbot = hugchat.ChatBot()
 print(chatbot.chat("HI"))
