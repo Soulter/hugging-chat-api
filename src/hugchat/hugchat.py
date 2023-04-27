@@ -63,14 +63,16 @@ class ChatBot:
         if resp.status_code == 200:
             for line in resp.iter_lines():
                 if line:
-                    line = json.loads(line)
-                    if "generated_text" in line:
-                        self.conversation_list.append(line["generated_text"])
-                        return line["generated_text"]
-                    elif "error" in line:
-                        raise Exception(line["error"])
+                    res = line.decode("utf-8")
+                    obj = json.loads(res[1:-1])
+                    if "generated_text" in obj:
+                        self.conversation_list.append(obj["generated_text"])
+                        return obj["generated_text"]
+                    elif "error" in obj:
+                        raise Exception(obj["error"])
     
 
 if __name__ == "__main__":
     chatbot = ChatBot()
-    chatbot.chat("Hello, I am a robot.")
+    res = chatbot.chat("Hello, I am a robot.")
+    print(res)

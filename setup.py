@@ -2,7 +2,7 @@ from setuptools import find_namespace_packages
 from setuptools import setup
 
 setup(
-    name="HuggingChat",
+    name="hugchat",
     version="0.0.1",
     description="A huggingchat python api.",
     long_description=open("README.md", "rt", encoding="utf-8").read(),
@@ -16,7 +16,7 @@ setup(
     license="GNU Affero General Public License v3.0",
     packages=find_namespace_packages("src"),
     package_dir={"": "src"},
-    py_modules=["HuggingChat"],
+    py_modules=["hugchat"],
     package_data={"": ["*.json"]},
     install_requires=[
         "requests",
