@@ -1,6 +1,9 @@
 # hugging-chat-api
 HuggingChat Python API
 
+[![PyPi](https://img.shields.io/pypi/v/hugchat.svg)](https://pypi.python.org/pypi/hugchat)
+[![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
+
 # How to Use?
 ```
 pip install hugchat
