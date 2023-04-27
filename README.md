@@ -2,10 +2,14 @@
 HuggingChat Python API
 
 # How to Use?
+```
+pip install hugchat
+```
 
 ```
-chatbot = ChatBot()
-chatbot.chat("Hello, I am a robot.")
+from hugchat import hugchat
+chatbot = hugchat.ChatBot()
+print(chatbot.chat("HI"))
 
 # New a conversation (ignore error)
 id = chatbot.new_conversation()
