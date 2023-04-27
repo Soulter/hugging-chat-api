@@ -4,7 +4,10 @@ HuggingChat Python API
 [![PyPi](https://img.shields.io/pypi/v/hugchat.svg)](https://pypi.python.org/pypi/hugchat)
 [![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
 
-# How to Use?
+- ChatGPT 平替！
+- 无需任何账号，中国大陆的朋友无需梯子
+
+# How to Use
 ```bash
 pip install hugchat
 ```
