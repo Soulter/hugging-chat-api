@@ -7,6 +7,8 @@ HuggingChat Python API
 - ChatGPT 平替！
 - 无需任何账号，中国大陆的朋友无需梯子
 
+Leave a star :)
+
 # How to Use
 ```bash
 pip install hugchat
@@ -24,3 +26,4 @@ chatbot.change_conversation(id)
 # Get conversation list
 conversation_list = chatbot.get_conversation_list()
 ```
+
