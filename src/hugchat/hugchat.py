@@ -1,5 +1,6 @@
 from requests import Session
 import json
+import uuid
 
 hf_url = "https://huggingface.co/chat"
 
@@ -37,6 +38,9 @@ class ChatBot:
                 if err_count > 5:
                     raise e
                 continue
+
+    def get_cookies(self) -> dict:
+        return self.session.cookies.get_dict()
         
 
     def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024) -> str:
@@ -52,14 +56,31 @@ class ChatBot:
                 "truncate": truncate,
                 "watermark": False,
                 "max_new_tokens": 1024,
-                "stop": ["<|endoftext|>"],
+                "stop": ["</s>"],
                 "return_full_text": False,
                 "stream": True,
-                "options": {"use_cache": False},
-            }
+            },
+            "options": {
+                    "use_cache": False,
+                    "is_retry": False,
+                    "id": str(uuid.uuid4()),
+            },
         }
-        resp = self.session.post(hf_url + f"/conversation/{self.now_conversation}", json=req_json, stream=True)
-        
+        # print(req_json)
+        # print(self.session.cookies.get_dict())
+        # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
+        headers = {
+            "Origin": "https://huggingface.co",
+            "Referer": f"https://huggingface.co/chat/conversation/{self.now_conversation}",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
+            "Content-Type": "application/json",
+            "Accept": "*/*",
+        }
+        resp = self.session.post(hf_url + f"/conversation/{self.now_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
+        res_text = ""
         if resp.status_code == 200:
             for line in resp.iter_lines():
                 if line:
@@ -67,12 +88,15 @@ class ChatBot:
                     obj = json.loads(res[1:-1])
                     if "generated_text" in obj:
                         self.conversation_list.append(obj["generated_text"])
-                        return obj["generated_text"]
+                        res_text += obj["generated_text"]
                     elif "error" in obj:
                         raise Exception(obj["error"])
+            return res_text
+        else:
+            raise Exception(f"Failed to chat. Status code: {resp.status_code}")
     
 
 if __name__ == "__main__":
     chatbot = ChatBot()
-    res = chatbot.chat("Hello, I am a robot.")
+    res = chatbot.chat("help me to write a python helloworld program")
     print(res)
