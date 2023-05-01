@@ -22,9 +22,9 @@ class ChatBot:
         self.now_conversation = conversation_id
         return True
     
-    # Return a list that contains id of conversations.
+    # Return a (copy of a) list that contains id of conversations.
     def get_conversation_list(self) -> list:
-        return self.conversation_id_list
+        return list(self.conversation_id_list)
     
     def new_conversation(self) -> str:
         err_count = 0
