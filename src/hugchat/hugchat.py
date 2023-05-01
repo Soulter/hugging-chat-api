@@ -43,7 +43,7 @@ class ChatBot:
         return self.session.cookies.get_dict()
         
 
-    def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024) -> str:
+    def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024, watermark=False, max_new_tokens=1024, stop=["</s>"], return_full_text=False, stream=True, use_cache=False, is_retry=False) -> str:
         if self.now_conversation == "":
             self.now_conversation = self.new_conversation()
         req_json = {
@@ -54,15 +54,15 @@ class ChatBot:
                 "repetition_penalty": repetition_penalty,
                 "top_k": top_k,
                 "truncate": truncate,
-                "watermark": False,
-                "max_new_tokens": 1024,
-                "stop": ["</s>"],
-                "return_full_text": False,
-                "stream": True,
+                "watermark": watermark,
+                "max_new_tokens": max_new_tokens,
+                "stop": stop,
+                "return_full_text": return_full_text,
+                "stream": stream,
             },
             "options": {
-                    "use_cache": False,
-                    "is_retry": False,
+                    "use_cache": use_cache,
+                    "is_retry": is_retry,
                     "id": str(uuid.uuid4()),
             },
         }
@@ -98,5 +98,8 @@ class ChatBot:
 
 if __name__ == "__main__":
     chatbot = ChatBot()
-    res = chatbot.chat("help me to write a python helloworld program")
-    print(res)
+    print("-----HuggingChat-----")
+    while True:
+        question = input("> ")
+        res = chatbot.chat(question)
+        print("< " + res)
