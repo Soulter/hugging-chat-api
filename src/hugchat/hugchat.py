@@ -22,7 +22,13 @@ class ChatBot:
         self.now_conversation = conversation_id
         return True
     
-    # Return a list that contains id of conversations.
+    # NOTE: To create a copy when calling this, call it inside of list().
+    #       If not, when updating or altering the values in the variable will
+    #       also be applied to this class's variable.
+    #       This behaviour is with any function returning self.<var_name>. It
+    #       acts as a pointer to the data in the object.
+    #
+    # Returns a pointer to this objects list that contains id of conversations.
     def get_conversation_list(self) -> list:
         return self.conversation_id_list
     
