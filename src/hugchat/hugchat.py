@@ -106,7 +106,8 @@ class ChatBot:
 def cli():
     chatbot = ChatBot()
     print("-----HuggingChat-----")
-    while True:
+    running = True
+    while running:
         question = input("> ")
         if question == "/new":
             cid = chatbot.new_conversation()
@@ -115,11 +116,10 @@ def cli():
             print("conversation changed successfully.")
             continue
         elif question in ["/exit", "/quit","/close"]:
-            exit(0)
+            running = False
         res = chatbot.chat(question)
         print("< " + res)
     
 
 if __name__ == "__main__":
     cli()
-
