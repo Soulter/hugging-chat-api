@@ -102,9 +102,8 @@ class ChatBot:
                 retry_count -= 1
                 if retry_count <= 0:
                     raise Exception(f"Failed to chat. ({resp.status_code})")
-    
 
-if __name__ == "__main__":
+def cli():
     chatbot = ChatBot()
     print("-----HuggingChat-----")
     while True:
@@ -117,3 +116,8 @@ if __name__ == "__main__":
             continue
         res = chatbot.chat(question)
         print("< " + res)
+    
+
+if __name__ == "__main__":
+    cli()
+
