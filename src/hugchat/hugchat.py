@@ -111,14 +111,15 @@ def cli():
         question = input("> ")
         if question == "/new":
             cid = chatbot.new_conversation()
-            print("the new conversation id is: " + cid)
+            print("The new conversation id is: " + cid)
             chatbot.change_conversation(cid)
-            print("conversation changed successfully.")
+            print("Conversation changed successfully.")
             continue
         elif question in ["/exit", "/quit","/close"]:
             running = False
-        res = chatbot.chat(question)
-        print("< " + res)
+        else:
+            res = chatbot.chat(question)
+            print("< " + res)
     
 
 if __name__ == "__main__":
