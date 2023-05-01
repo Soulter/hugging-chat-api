@@ -8,7 +8,7 @@ hf_url = "https://huggingface.co/chat"
 class ChatBot:
     def __init__(self) -> None:
         self.session = self.get_hc_session()
-        self.conversation_list = []
+        self.conversation_id_list = []
         self.now_conversation = self.new_conversation()
 
     def get_hc_session(self) -> Session:
@@ -17,13 +17,14 @@ class ChatBot:
         return session
     
     def change_conversation(self, conversation_id: str) -> bool:
-        if conversation_id not in self.conversation_list:
+        if conversation_id not in self.conversation_id_list:
             raise Exception("Invalid conversation id. Please check conversation id list.")
         self.now_conversation = conversation_id
         return True
     
+    # Return a list that contains id of conversations.
     def get_conversation_list(self) -> list:
-        return self.conversation_list
+        return self.conversation_id_list
     
     def new_conversation(self) -> str:
         err_count = 0
@@ -31,7 +32,9 @@ class ChatBot:
         while True:
             try:
                 resp = self.session.post(hf_url + "/conversation")
-                return json.loads(resp.text)['conversationId']
+                cid = json.loads(resp.text)['conversationId']
+                self.conversation_id_list.append(cid)
+                return cid
             except BaseException as e:
                 err_count += 1
                 print(f"[Error] Failed to create new conversation. Retrying... ({err_count})")
@@ -87,7 +90,6 @@ class ChatBot:
                     res = line.decode("utf-8")
                     obj = json.loads(res[1:-1])
                     if "generated_text" in obj:
-                        self.conversation_list.append(obj["generated_text"])
                         res_text += obj["generated_text"]
                     elif "error" in obj:
                         raise Exception(obj["error"])
@@ -101,5 +103,11 @@ if __name__ == "__main__":
     print("-----HuggingChat-----")
     while True:
         question = input("> ")
+        if question == "/new":
+            cid = chatbot.new_conversation()
+            print("the new conversation id is: " + cid)
+            chatbot.change_conversation(cid)
+            print("conversation changed successfully.")
+            continue
         res = chatbot.chat(question)
         print("< " + res)
