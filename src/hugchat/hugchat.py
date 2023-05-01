@@ -112,7 +112,7 @@ class ChatBot:
 
 def cli():
     chatbot = ChatBot()
-    print("-----HuggingChat-----")
+    print("-------HuggingChat-------")
     running = True
     while running:
         question = input("> ")
