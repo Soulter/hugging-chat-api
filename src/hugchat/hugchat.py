@@ -46,7 +46,9 @@ class ChatBot:
         return self.session.cookies.get_dict()
         
 
-    def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024, watermark=False, max_new_tokens=1024, stop=["</s>"], return_full_text=False, stream=True, use_cache=False, is_retry=False) -> str:
+    def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024, watermark=False, max_new_tokens=1024, stop=["</s>"], return_full_text=False, stream=True, use_cache=False, is_retry=False, retry_count=5) -> str:
+        if retry_count <= 0:
+            raise Exception("the parameter retry_count must be greater than 0.")
         if self.now_conversation == "":
             self.now_conversation = self.new_conversation()
         req_json = {
@@ -82,20 +84,24 @@ class ChatBot:
             "Content-Type": "application/json",
             "Accept": "*/*",
         }
-        resp = self.session.post(hf_url + f"/conversation/{self.now_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
-        res_text = ""
-        if resp.status_code == 200:
-            for line in resp.iter_lines():
-                if line:
-                    res = line.decode("utf-8")
-                    obj = json.loads(res[1:-1])
-                    if "generated_text" in obj:
-                        res_text += obj["generated_text"]
-                    elif "error" in obj:
-                        raise Exception(obj["error"])
-            return res_text
-        else:
-            raise Exception(f"Failed to chat. Status code: {resp.status_code}")
+
+        while retry_count > 0:
+            resp = self.session.post(hf_url + f"/conversation/{self.now_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
+            res_text = ""
+            if resp.status_code == 200:
+                for line in resp.iter_lines():
+                    if line:
+                        res = line.decode("utf-8")
+                        obj = json.loads(res[1:-1])
+                        if "generated_text" in obj:
+                            res_text += obj["generated_text"]
+                        elif "error" in obj:
+                            raise Exception(obj["error"])
+                return res_text
+            else:
+                retry_count -= 1
+                if retry_count <= 0:
+                    raise Exception(f"Failed to chat. ({resp.status_code})")
     
 
 if __name__ == "__main__":
