@@ -9,7 +9,7 @@ class ChatBot:
     def __init__(self) -> None:
         self.session = self.get_hc_session()
         self.conversation_id_list = []
-        self.now_conversation = self.new_conversation()
+        self.current_conversation = self.new_conversation()
 
     def get_hc_session(self) -> Session:
         session = Session()
@@ -19,12 +19,19 @@ class ChatBot:
     def change_conversation(self, conversation_id: str) -> bool:
         if conversation_id not in self.conversation_id_list:
             raise Exception("Invalid conversation id. Please check conversation id list.")
-        self.now_conversation = conversation_id
+        self.current_conversation = conversation_id
         return True
     
-    # Return a list that contains id of conversations.
+
+    # NOTE: To create a copy when calling this, call it inside of list().
+    #       If not, when updating or altering the values in the variable will
+    #       also be applied to this class's variable.
+    #       This behaviour is with any function returning self.<var_name>. It
+    #       acts as a pointer to the data in the object.
+    #
+    # Returns a pointer to this objects list that contains id of conversations.
     def get_conversation_list(self) -> list:
-        return self.conversation_id_list
+        return list(self.conversation_id_list)
     
     def new_conversation(self) -> str:
         err_count = 0
@@ -49,8 +56,8 @@ class ChatBot:
     def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024, watermark=False, max_new_tokens=1024, stop=["</s>"], return_full_text=False, stream=True, use_cache=False, is_retry=False, retry_count=5) -> str:
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
-        if self.now_conversation == "":
-            self.now_conversation = self.new_conversation()
+        if self.current_conversation == "":
+            self.current_conversation = self.new_conversation()
         req_json = {
             "inputs": text,
             "parameters": {
@@ -76,7 +83,7 @@ class ChatBot:
         # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
         headers = {
             "Origin": "https://huggingface.co",
-            "Referer": f"https://huggingface.co/chat/conversation/{self.now_conversation}",
+            "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",
@@ -86,7 +93,7 @@ class ChatBot:
         }
 
         while retry_count > 0:
-            resp = self.session.post(hf_url + f"/conversation/{self.now_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
+            resp = self.session.post(hf_url + f"/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
             res_text = ""
             if resp.status_code == 200:
                 for line in resp.iter_lines():
@@ -105,18 +112,41 @@ class ChatBot:
 
 def cli():
     chatbot = ChatBot()
-    print("-----HuggingChat-----")
+    print("-------HuggingChat-------")
     running = True
     while running:
         question = input("> ")
         if question == "/new":
             cid = chatbot.new_conversation()
-            print("The new conversation id is: " + cid)
+            print("The new conversation ID is: " + cid)
             chatbot.change_conversation(cid)
             print("Conversation changed successfully.")
             continue
+        
+        elif question.startswith("/switch"):
+            try:
+                _index = int(question.split(" ")[1])
+            except ValueError:
+                print("# Please enter a valid ID number\n")
+            
+            if len(chatbot.get_conversation_list()) < _index-1:
+                print("# Please enter a valid ID number")
+            else:
+                chatbot.change_conversation(list(chatbot.get_conversation_list())[_index-1])
+        
+        elif question == "/ids":
+            id_list = list(chatbot.get_conversation_list())
+            [print(f"{id_list.index(i)+1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in id_list]
+        
         elif question in ["/exit", "/quit","/close"]:
             running = False
+        
+        elif question.startswith("/"):
+            print("# Invalid command")
+        
+        elif question == "":
+            pass
+
         else:
             res = chatbot.chat(question)
             print("< " + res)
