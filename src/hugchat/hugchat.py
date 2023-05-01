@@ -114,6 +114,8 @@ def cli():
             chatbot.change_conversation(cid)
             print("conversation changed successfully.")
             continue
+        elif question in ["/exit", "/quit","/close"]:
+            exit(0)
         res = chatbot.chat(question)
         print("< " + res)
     
