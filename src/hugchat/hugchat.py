@@ -135,7 +135,8 @@ def cli():
                 chatbot.change_conversation(list(chatbot.get_conversation_list())[_index-1])
         
         elif question == "/ids":
-            [print(f"{i}") for i in list(chatbot.get_conversation_list())]
+            id_list = list(chatbot.get_conversation_list())
+            [print(f"{id_list.index(i)+1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in id_list]
         
         elif question in ["/exit", "/quit","/close"]:
             running = False
