@@ -9,7 +9,7 @@ class ChatBot:
     def __init__(self) -> None:
         self.session = self.get_hc_session()
         self.conversation_id_list = []
-        self.now_conversation = self.new_conversation()
+        self.current_conversation = self.new_conversation()
 
     def get_hc_session(self) -> Session:
         session = Session()
@@ -19,7 +19,7 @@ class ChatBot:
     def change_conversation(self, conversation_id: str) -> bool:
         if conversation_id not in self.conversation_id_list:
             raise Exception("Invalid conversation id. Please check conversation id list.")
-        self.now_conversation = conversation_id
+        self.current_conversation = conversation_id
         return True
     
 
@@ -56,8 +56,8 @@ class ChatBot:
     def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024, watermark=False, max_new_tokens=1024, stop=["</s>"], return_full_text=False, stream=True, use_cache=False, is_retry=False, retry_count=5) -> str:
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
-        if self.now_conversation == "":
-            self.now_conversation = self.new_conversation()
+        if self.current_conversation == "":
+            self.current_conversation = self.new_conversation()
         req_json = {
             "inputs": text,
             "parameters": {
@@ -83,7 +83,7 @@ class ChatBot:
         # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
         headers = {
             "Origin": "https://huggingface.co",
-            "Referer": f"https://huggingface.co/chat/conversation/{self.now_conversation}",
+            "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",
@@ -93,7 +93,7 @@ class ChatBot:
         }
 
         while retry_count > 0:
-            resp = self.session.post(hf_url + f"/conversation/{self.now_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
+            resp = self.session.post(hf_url + f"/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
             res_text = ""
             if resp.status_code == 200:
                 for line in resp.iter_lines():
