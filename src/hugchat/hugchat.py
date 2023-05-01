@@ -22,6 +22,7 @@ class ChatBot:
         self.now_conversation = conversation_id
         return True
     
+
     # NOTE: To create a copy when calling this, call it inside of list().
     #       If not, when updating or altering the values in the variable will
     #       also be applied to this class's variable.
@@ -117,12 +118,34 @@ def cli():
         question = input("> ")
         if question == "/new":
             cid = chatbot.new_conversation()
-            print("The new conversation id is: " + cid)
+            print("The new conversation ID is: " + cid)
             chatbot.change_conversation(cid)
             print("Conversation changed successfully.")
             continue
+        
+        elif question.startswith("/switch"):
+            try:
+                _index = int(question.split(" ")[1])
+            except ValueError:
+                print("# Please enter a valid ID number\n")
+            
+            if len(chatbot.get_conversation_list()) < _index-1:
+                print("# Please enter a valid ID number")
+            else:
+                chatbot.change_conversation(list(chatbot.get_conversation_list())[_index-1])
+        
+        elif question == "/ids":
+            [print(f"{i}") for i in list(chatbot.get_conversation_list())]
+        
         elif question in ["/exit", "/quit","/close"]:
             running = False
+        
+        elif question.startswith("/"):
+            print("# Invalid command")
+        
+        elif question == "":
+            pass
+
         else:
             res = chatbot.chat(question)
             print("< " + res)
