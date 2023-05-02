@@ -53,7 +53,23 @@ class ChatBot:
         return self.session.cookies.get_dict()
         
 
-    def chat(self, text: str, temperature=0.9, top_p=0.95, repetition_penalty=1.2, top_k=50, truncate=1024, watermark=False, max_new_tokens=1024, stop=["</s>"], return_full_text=False, stream=True, use_cache=False, is_retry=False, retry_count=5) -> str:
+    def chat(
+        self,
+        text: str,
+        temperature: float=0.9,
+        top_p: float=0.95,
+        repetition_penalty: float=1.2,
+        top_k: int=50,
+        truncate: int=1024,
+        watermark: bool=False,
+        max_new_tokens: int=1024,
+        stop: list=["</s>"],
+        return_full_text: bool=False,
+        stream: bool=True,
+        use_cache: bool=False,
+        is_retry: bool=False,
+        retry_count: int=5,
+    ):
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
         if self.current_conversation == "":

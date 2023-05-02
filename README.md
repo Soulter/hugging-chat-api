@@ -7,9 +7,9 @@ HuggingChat Python API
 
 Leave a star :)
 
-# How to Use
+##  How to Use
 
-## Basic mode
+### Basic mode
 ```bash
 pip install hugchat
 ```
@@ -29,33 +29,34 @@ conversation_list = chatbot.get_conversation_list()
 
 The `chat()` function can receive many parameters:
 
-- `text`: Required.
-- `temperature`: Optional
-- `top_p`: Optional
-- `repetition_penalty`: Optional
-- `top_k`: Optional
-- `truncate`: Optional
-- `watermark`: Optional
-- `max_new_tokens`: Optional
-- `stop`: Optional
-- `return_full_text`: Optional
-- `stream`: Optional
-- `use_cache`: Optional
-- `is_retry`: Optional
-- `retry_count`: Optional. Number of retries for requesting huggingchat. Default is 5
+- `text`: Required[str].
+- `temperature`: Optional[float]. Default is 0.9
+- `top_p`: Optional[float]. Default is 0.95
+- `repetition_penalty`: Optional[float]. Default is 1.2
+- `top_k`: Optional[int]. Default is 50
+- `truncate`: Optional[int]. Default is 1024
+- `watermark`: Optional[bool]. Default is False
+- `max_new_tokens`: Optional[int]. Default is 1024
+- `stop`: Optional[list]. Default is ["</s>"]
+- `return_full_text`: Optional[bool]. Default is False
+- `stream`: Optional[bool]. Default is True
+- `use_cache`: Optional[bool]. Default is False
+- `is_retry`: Optional[bool]. Default is False
+- `retry_count`: Optional[int]. Number of retries for requesting huggingchat. Default is 5
 
-## CLI mode
+### CLI mode
 
 > `version 0.0.5.1` or newer
 
-You can use `cli mode` to test the repo: 
+You can use `cli mode` to test the repo:
 
-```
+```python
 from hugchat import hugchat
 hugchat.cli()
 ```
 
 Commands in cli mode:
+
 - `/new` : Create and switch to a new conversation.
 - `/ids` : Shows a list of all ID numbers and ID strings in current session.
 - `/switch <id>` : Switches to the ID number passed.
