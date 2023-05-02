@@ -19,7 +19,7 @@ from hugchat import hugchat
 chatbot = hugchat.ChatBot()
 print(chatbot.chat("HI"))
 
-# New a conversation (ignore error)
+# Create a new conversation
 id = chatbot.new_conversation()
 chatbot.change_conversation(id)
 
@@ -55,5 +55,8 @@ from hugchat import hugchat
 hugchat.cli()
 ```
 
-some commands in cli mode:
-- `/new`: new and change a coonversation.
+Commands in cli mode:
+- `/new` : Create and switch to a new conversation.
+- `/ids` : Shows a list of all ID numbers and ID strings in current session.
+- `/switch <id>` : Switches to the ID number passed.
+- `/exit` : Closes CLI environment.
