@@ -140,14 +140,18 @@ def cli():
         
         elif question.startswith("/switch"):
             try:
-                _index = int(question.split(" ")[1])
+                conversations = chatbot.get_conversation_list()
+                conversation_id = str(question.split(" ")[1] if len(question.split(" ")) > 1 else "")
+                if conversation_id not in conversations:
+                    print("# Please enter a valid ID number.")
+                    print(f"# Sessions include: {conversations}")
+                else:
+                    chatbot.change_conversation(conversation_id)
+                    print(f"# Conversation switched successfully to {conversation_id}")
             except ValueError:
                 print("# Please enter a valid ID number\n")
             
-            if len(chatbot.get_conversation_list()) < _index-1:
-                print("# Please enter a valid ID number")
-            else:
-                chatbot.change_conversation(list(chatbot.get_conversation_list())[_index-1])
+            
         
         elif question == "/ids":
             id_list = list(chatbot.get_conversation_list())
