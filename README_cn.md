@@ -1,6 +1,6 @@
 # hugging-chat-api
 
-English | [简体中文](README_cn.md)
+[English](README.md) | 简体中文
 
 HuggingChat Python API
 
@@ -8,11 +8,11 @@ HuggingChat Python API
 [![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
 [![Downloads](https://static.pepy.tech/badge/hugchat)](https://pypi.python.org/pypi/hugchat)
 
-Leave a star :)
+给个星先😋
 
-## How to Use
+## 使用方式
 
-### Basic mode
+### Python调用
 
 ```bash
 pip install hugchat
@@ -21,17 +21,17 @@ pip install hugchat
 ```py
 from hugchat import hugchat
 chatbot = hugchat.ChatBot()
-print(chatbot.chat("HI"))
+print(chatbot.chat("Hello!"))
 
-# Create a new conversation
+# 创建一个新的会话
 id = chatbot.new_conversation()
 chatbot.change_conversation(id)
 
-# Get conversation list
+# 获取会话列表
 conversation_list = chatbot.get_conversation_list()
 ```
 
-The `chat()` function receives these parameters:
+`chat()` 函数接收以下参数:
 
 - `text`: Required[str].
 - `temperature`: Optional[float]. Default is 0.9
@@ -48,19 +48,19 @@ The `chat()` function receives these parameters:
 - `is_retry`: Optional[bool]. Default is False
 - `retry_count`: Optional[int]. Number of retries for requesting huggingchat. Default is 5
 
-### CLI mode
+### 命令行交互
 
-> `version 0.0.5.2` or newer
+> `0.0.5.2` 或更高版本
 
-Simply run the following command in your terminal to start the CLI mode
+使用以下命令启动命令行交互模式
 
 ```bash
 python -m hugchat.cli
 ```
 
-Commands in cli mode:
+CLI模式中的命令：
 
-- `/new` : Create and switch to a new conversation.
-- `/ids` : Shows a list of all ID numbers and ID strings in current session.
-- `/switch <id>` : Switches to the ID number passed.
-- `/exit` : Closes CLI environment.
+- `/new` : 创建一个新的会话
+- `/ids` : 查看会话列表
+- `/switch <id>` : 切换到指定会话
+- `/exit` : 退出CLI模式
