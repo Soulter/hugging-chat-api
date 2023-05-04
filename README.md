@@ -1,4 +1,5 @@
 # hugging-chat-api
+
 HuggingChat Python API
 
 [![PyPi](https://img.shields.io/pypi/v/hugchat.svg)](https://pypi.python.org/pypi/hugchat)
@@ -7,9 +8,10 @@ HuggingChat Python API
 
 Leave a star :)
 
-##  How to Use
+## How to Use
 
 ### Basic mode
+
 ```bash
 pip install hugchat
 ```
@@ -46,13 +48,12 @@ The `chat()` function can receive many parameters:
 
 ### CLI mode
 
-> `version 0.0.5.1` or newer
+> `version 0.0.5.2` or newer
 
-You can use `cli mode` to test the repo:
+Simply run the following command in your terminal to start the CLI mode
 
-```python
-from hugchat import hugchat
-hugchat.cli()
+```bash
+python -m hugchat.cli
 ```
 
 Commands in cli mode:
