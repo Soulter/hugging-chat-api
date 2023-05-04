@@ -2,18 +2,17 @@ from requests import Session
 import json
 import uuid
 
-hf_url = "https://huggingface.co/chat"
-
-
 class ChatBot:
     def __init__(self) -> None:
+        self.hf_base_url = "https://huggingface.co"
+        self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
         self.conversation_id_list = []
         self.current_conversation = self.new_conversation()
 
     def get_hc_session(self) -> Session:
         session = Session()
-        session.get(hf_url)
+        session.get(self.hf_base_url + "/chat")
         return session
     
     def change_conversation(self, conversation_id: str) -> bool:
@@ -38,7 +37,7 @@ class ChatBot:
         resp = ""
         while True:
             try:
-                resp = self.session.post(hf_url + "/conversation", json={"model": "OpenAssistant/oasst-sft-6-llama-30b-xor"}, headers={"Content-Type": "application/json"})
+                resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": "OpenAssistant/oasst-sft-6-llama-30b-xor"}, headers=self.json_header)
                 # print(resp.text)
                 cid = json.loads(resp.text)['conversationId']
                 self.conversation_id_list.append(cid)
@@ -98,19 +97,18 @@ class ChatBot:
         # print(req_json)
         # print(self.session.cookies.get_dict())
         # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
-        headers = {
-            "Origin": "https://huggingface.co",
-            "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
+        headers = self.json_header | {
+            "Origin": self.hf_base_url,
+            "Referer": self.hf_base_url + f"/chat/conversation/{self.current_conversation}",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
-            "Content-Type": "application/json",
             "Accept": "*/*",
         }
 
         while retry_count > 0:
-            resp = self.session.post(hf_url + f"/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
+            resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
             res_text = ""
             if resp.status_code == 200:
                 for line in resp.iter_lines():
