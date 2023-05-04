@@ -38,7 +38,8 @@ class ChatBot:
         resp = ""
         while True:
             try:
-                resp = self.session.post(hf_url + "/conversation")
+                resp = self.session.post(hf_url + "/conversation", json={"model": "OpenAssistant/oasst-sft-6-llama-30b-xor"}, headers={"Content-Type": "application/json"})
+                # print(resp.text)
                 cid = json.loads(resp.text)['conversationId']
                 self.conversation_id_list.append(cid)
                 return cid
