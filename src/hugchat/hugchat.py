@@ -97,7 +97,8 @@ class ChatBot:
         # print(req_json)
         # print(self.session.cookies.get_dict())
         # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
-        headers = self.json_header | {
+        headers = {
+            **self.json_header,
             "Origin": self.hf_base_url,
             "Referer": self.hf_base_url + f"/chat/conversation/{self.current_conversation}",
             "Sec-Fetch-Dest": "empty",
