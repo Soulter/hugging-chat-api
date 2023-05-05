@@ -12,6 +12,7 @@ class ChatBot:
         self.session = self.get_hc_session()
         self.conversation_id_list = []
         self.active_model = "OpenAssistant/oasst-sft-6-llama-30b-xor"
+        self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
         self.current_conversation = self.new_conversation()
 
 
@@ -40,28 +41,32 @@ class ChatBot:
     def new_conversation(self) -> str:
         err_count = 0
 
-        # Accept the welcome modal.
-        boundary = "----WebKitFormBoundary" + ''.join(random.sample(string.ascii_letters + string.digits, 16))
-        headers = {
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "Origin": self.hf_base_url,
-            "Referer": self.hf_base_url + "/chat/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
-            "Accept": "application/json",
-        }
-        welcome_modal_fields = {
-            "ethicsModalAccepted": "true",
-            "shareConversationsWithModelAuthors": "true",
-            "ethicsModalAcceptedAt": "",
-            "activeModel": self.active_model,
-        }
-        m = MultipartEncoder(fields=welcome_modal_fields, boundary=boundary)
-        res = self.session.post(self.hf_base_url + "/chat/settings", headers=headers, data=m)
-        # print(res.request.body)
-        # print(res.text)
+        # Accept the welcome modal when init.
+        if not self.accepted_welcome_modal:
+            boundary = "----WebKitFormBoundary" + ''.join(random.sample(string.ascii_letters + string.digits, 16))
+            headers = {
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+                "Origin": self.hf_base_url,
+                "Referer": self.hf_base_url + "/chat/",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
+                "Accept": "application/json",
+            }
+            welcome_modal_fields = {
+                "ethicsModalAccepted": "true",
+                "shareConversationsWithModelAuthors": "true",
+                "ethicsModalAcceptedAt": "",
+                "activeModel": self.active_model,
+            }
+            m = MultipartEncoder(fields=welcome_modal_fields, boundary=boundary)
+            res = self.session.post(self.hf_base_url + "/chat/settings", headers=headers, data=m)
+            # result_json = json.loads(res.text)
+            # if result_json['type'] == "redirect" and result_json['status'] == 303:
+            self.accepted_welcome_modal = True
+            # print(res.request.body)
+            # print(res.text)
 
         # Create new conversation and get a conversation id.
         resp = ""
