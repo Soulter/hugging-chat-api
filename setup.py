@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="hugchat",
-    version="0.0.5.2",
+    version="0.0.5.5",
     description="A huggingchat python api.",
     long_description=open("README.md", "rt", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -20,6 +20,7 @@ setup(
     package_data={"": ["*.json"]},
     install_requires=[
         "requests",
+        "requests_toolbelt",
     ],
     classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
