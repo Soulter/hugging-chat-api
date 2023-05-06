@@ -1,9 +1,6 @@
-import random
-import string
 from requests import Session
 import json
 import uuid
-from requests_toolbelt import MultipartEncoder
 
 class ChatBot:
     def __init__(self) -> None:
@@ -21,11 +18,28 @@ class ChatBot:
         session.get(self.hf_base_url + "/chat")
         return session
     
-    def change_conversation(self, conversation_id: str) -> bool:
-        if conversation_id not in self.conversation_id_list:
-            raise Exception("Invalid conversation id. Please check conversation id list.")
-        self.current_conversation = conversation_id
-        return True
+    def get_headers(self, ref=True) -> dict:
+        _h = {
+            "Accept": "*/*",
+            "Connection": "keep-alive",
+
+            "Host": "huggingface.co",
+            "Origin": "https://huggingface.co",
+            "sec-gpc": "1",
+
+            "Sec-Fetch-Site": "same-origin",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Dest": "empty",
+
+            "Accept-Encoding": "gzip, deflate, br",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+        }
+        if ref:
+            _h["Referer"] = f"https://huggingface.co/chat/conversation/{self.current_conversation}"
+        return _h
+    
+    def get_cookies(self) -> dict:
+        return self.session.cookies.get_dict()
     
 
     # NOTE: To create a copy when calling this, call it inside of list().
@@ -37,36 +51,26 @@ class ChatBot:
     # Returns a pointer to this objects list that contains id of conversations.
     def get_conversation_list(self) -> list:
         return list(self.conversation_id_list)
+
+    def accept_ethics_model(self):
+        response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=False), cookies=self.get_cookies(), allow_redirects=True, data={
+            "ethicsModalAccepted": "true",
+            "shareConversationsWithModelAuthors": "true",
+            "ethicsModalAcceptedAt": "",
+            "activeModel": str(self.active_model)
+        })
+
+        if response.status_code != 200:
+            raise Exception(f"Failed to accept ethics model with status code {response.status_code}. {response.content.decode()}")
+        
+        return True
     
     def new_conversation(self) -> str:
         err_count = 0
 
         # Accept the welcome modal when init.
         if not self.accepted_welcome_modal:
-            boundary = "----WebKitFormBoundary" + ''.join(random.sample(string.ascii_letters + string.digits, 16))
-            headers = {
-                "Content-Type": f"multipart/form-data; boundary={boundary}",
-                "Origin": self.hf_base_url,
-                "Referer": self.hf_base_url + "/chat/",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
-                "Accept": "application/json",
-            }
-            welcome_modal_fields = {
-                "ethicsModalAccepted": "true",
-                "shareConversationsWithModelAuthors": "true",
-                "ethicsModalAcceptedAt": "",
-                "activeModel": self.active_model,
-            }
-            m = MultipartEncoder(fields=welcome_modal_fields, boundary=boundary)
-            res = self.session.post(self.hf_base_url + "/chat/settings", headers=headers, data=m)
-            # result_json = json.loads(res.text)
-            # if result_json['type'] == "redirect" and result_json['status'] == 303:
-            self.accepted_welcome_modal = True
-            # print(res.request.body)
-            # print(res.text)
+            self.accept_ethics_model()
 
         # Create new conversation and get a conversation id.
         resp = ""
@@ -77,16 +81,54 @@ class ChatBot:
                 cid = json.loads(resp.text)['conversationId']
                 self.conversation_id_list.append(cid)
                 return cid
+            
             except BaseException as e:
                 err_count += 1
                 print(f"[Error] Failed to create new conversation. Retrying... ({err_count})")
                 if err_count > 5:
                     raise e
                 continue
-
-    def get_cookies(self) -> dict:
-        return self.session.cookies.get_dict()
+    
+    def change_conversation(self, conversation_id: str) -> bool:
+        if conversation_id not in self.conversation_id_list:
+            raise Exception("Invalid conversation id. Please check conversation id list.")
+        self.current_conversation = conversation_id
+        return True
+    
         
+    def summarize_conversation(self, conversation_id: str = None) -> str:
+        if conversation_id is None:
+            conversation_id = self.current_conversation
+        
+        headers = self.get_headers()
+
+        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/summarize", headers=headers, cookies=self.get_cookies())
+        
+        if r.status_code != 200:
+            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
+        
+        response = r.json()
+        if 'title' in response:
+            return response['title']
+
+        raise Exception(f"Unknown server response: {response}")
+    
+    def share_conversation(self, conversation_id: str = None) -> str:
+        if conversation_id is None:
+            conversation_id = self.current_conversation
+
+        headers = self.get_headers()
+        
+        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/share", headers=headers, cookies=self.get_cookies())
+        
+        if r.status_code != 200:
+            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
+        
+        response = r.json()
+        if 'url' in response:
+            return response['url']
+
+        raise Exception(f"Unknown server response: {response}")
 
     def chat(
         self,
@@ -132,34 +174,26 @@ class ChatBot:
         # print(req_json)
         # print(self.session.cookies.get_dict())
         # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
-        headers = {
-            **self.json_header,
-            "Origin": self.hf_base_url,
-            "Referer": self.hf_base_url + f"/chat/conversation/{self.current_conversation}",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
-            "Accept": "*/*",
-        }
+        headers = self.get_headers(ref=True)
 
         while retry_count > 0:
             resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
             res_text = ""
-            if resp.status_code == 200:
-                for line in resp.iter_lines():
-                    if line:
-                        res = line.decode("utf-8")
-                        obj = json.loads(res[1:-1])
-                        if "generated_text" in obj:
-                            res_text += obj["generated_text"]
-                        elif "error" in obj:
-                            raise Exception(obj["error"])
-                return res_text
-            else:
+
+            if resp.status_code != 200:
                 retry_count -= 1
                 if retry_count <= 0:
                     raise Exception(f"Failed to chat. ({resp.status_code})")
+
+            for line in resp.iter_lines():
+                if line:
+                    res = line.decode("utf-8")
+                    obj = json.loads(res[1:-1])
+                    if "generated_text" in obj:
+                        res_text += obj["generated_text"]
+                    elif "error" in obj:
+                        raise Exception(obj["error"])
+            return res_text
 
 def cli():
     print("-------HuggingChat-------")
@@ -209,4 +243,12 @@ def cli():
     
 
 if __name__ == "__main__":
+    bot = ChatBot()
+    message_content = bot.chat("Hello", max_new_tokens=10)
+    print(message_content)
+    summary = bot.summarize_conversation()
+    print(summary)
+    sharelink = bot.share_conversation()
+    print(sharelink)
+
     cli()
