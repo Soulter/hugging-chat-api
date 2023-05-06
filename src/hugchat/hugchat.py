@@ -52,7 +52,7 @@ class ChatBot:
     def get_conversation_list(self) -> list:
         return list(self.conversation_id_list)
 
-    def accept_ethics_model(self):
+    def accept_ethics_modal(self):
         response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=False), cookies=self.get_cookies(), allow_redirects=True, data={
             "ethicsModalAccepted": "true",
             "shareConversationsWithModelAuthors": "true",
@@ -61,7 +61,7 @@ class ChatBot:
         })
 
         if response.status_code != 200:
-            raise Exception(f"Failed to accept ethics model with status code {response.status_code}. {response.content.decode()}")
+            raise Exception(f"Failed to accept ethics modal with status code {response.status_code}. {response.content.decode()}")
         
         return True
     
@@ -70,7 +70,7 @@ class ChatBot:
 
         # Accept the welcome modal when init.
         if not self.accepted_welcome_modal:
-            self.accept_ethics_model()
+            self.accept_ethics_modal()
 
         # Create new conversation and get a conversation id.
         resp = ""
