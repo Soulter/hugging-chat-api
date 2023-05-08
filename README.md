@@ -10,6 +10,10 @@ HuggingChat Python API
 
 Leave a star :)
 
+> When you use this project, it means that you have agreed to the following two requirements of the HuggingChat: 
+> 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
+> 2. Your conversations will be shared with model authors.
+
 ## How to Use
 
 ### Basic mode
