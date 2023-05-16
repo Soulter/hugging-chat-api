@@ -4,19 +4,33 @@ English | [简体中文](README_cn.md)
 
 HuggingChat Python API
 
-💡 Note: No API key required!
-
 [![PyPi](https://img.shields.io/pypi/v/hugchat.svg)](https://pypi.python.org/pypi/hugchat)
 [![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
 [![Downloads](https://static.pepy.tech/badge/hugchat)](https://pypi.python.org/pypi/hugchat)
 
 Leave a star :)
 
-> When you use this project, it means that you have agreed to the following two requirements of the HuggingChat: 
-> 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
+> When you use this project, it means that you have agreed to the following two requirements of the HuggingChat:  
+>
+> 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.  
 > 2. Your conversations will be shared with model authors.
 
-## How to Use
+## Authentication (Required Now)
+
+### Cookies
+
+<details>
+<summary>How to extra cookies</summary>
+
+- Install the cookie editor extension for [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
+- Go to [HuggingChat](https://huggingface.co/chat) and **login**
+- Open the extension
+- Click "Export" on the bottom right, then "Export as JSON" (This saves your cookies to clipboard)
+- Paste your cookies into a file `cookies.json`
+
+</details>
+
+## Usage
 
 ### Basic mode
 
@@ -26,7 +40,7 @@ pip install hugchat
 
 ```py
 from hugchat import hugchat
-chatbot = hugchat.ChatBot()
+chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # or cookies=[...]
 print(chatbot.chat("HI"))
 
 # Create a new conversation

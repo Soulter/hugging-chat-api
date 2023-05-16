@@ -3,7 +3,34 @@ import json
 import uuid
 
 class ChatBot:
-    def __init__(self) -> None:
+    
+    cookies: dict
+    """Cookies for authentication"""
+
+    session: Session
+    """HuggingChat session"""
+
+    def __init__(
+        self,
+        cookies: dict = None,
+        cookie_path: str = ""
+    ) -> None:
+        if cookies is None and cookie_path == "":
+            raise Exception("Authentication is required now, but no cookies provided")
+        elif cookies is not None and cookie_path != "":
+            raise Exception("Both cookies and cookie_path provided")
+        
+        if cookies is None and cookie_path != "":
+            # read cookies from path
+            with open(cookie_path, "r") as f:
+                cookies = json.load(f)
+
+        # convert cookies to KV format
+        if isinstance(cookies, list):
+            cookies = {cookie["name"]: cookie["value"] for cookie in cookies}
+
+        self.cookies = cookies
+
         self.hf_base_url = "https://huggingface.co"
         self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
@@ -12,9 +39,10 @@ class ChatBot:
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
         self.current_conversation = self.new_conversation()
 
-
     def get_hc_session(self) -> Session:
         session = Session()
+        # set cookies
+        session.cookies.update(self.cookies)
         session.get(self.hf_base_url + "/chat")
         return session
     
@@ -198,7 +226,7 @@ class ChatBot:
 def cli():
     print("-------HuggingChat-------")
     print("1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
-    chatbot = ChatBot()
+    chatbot = ChatBot(cookie_path="cookies.json")
     running = True
     while running:
         question = input("> ")

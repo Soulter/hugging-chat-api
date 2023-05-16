@@ -10,6 +10,21 @@ HuggingChat Python API
 
 给个星先😋
 
+## 鉴权 (必需)
+
+### Cookies
+
+<details>
+<summary>如何提取Cookies</summary>
+
+- 安装 [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) 或 [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) 的 cookie editor 扩展
+- 访问 [HuggingChat](https://huggingface.co/chat) 并 **登录**
+- 打开扩展程序
+- 点击右下角的"导出" (将会把内容保存到你的剪贴板上)
+- 把你剪贴板上的内容粘贴到 `cookies.json` 文件中
+
+</details>
+
 ## 使用方式
 
 ### Python调用
@@ -20,7 +35,7 @@ pip install hugchat
 
 ```py
 from hugchat import hugchat
-chatbot = hugchat.ChatBot()
+chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # 或者 cookies=[...]
 print(chatbot.chat("Hello!"))
 
 # 创建一个新的会话
