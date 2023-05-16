@@ -20,12 +20,12 @@ Leave a star :)
 ### Cookies
 
 <details>
-<summary>How to extra cookies</summary>
+<summary>How to Get Cookies ?</summary>
 
-- Install the cookie editor extension for [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
+- Install the `Cookie-Editor` extension for [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
 - Go to [HuggingChat](https://huggingface.co/chat) and **login**
 - Open the extension
-- Click "Export" on the bottom right, then "Export as JSON" (This saves your cookies to clipboard)
+- Click `Export` on the bottom right, then `Export as JSON`(This saves your cookies to the clipboard)
 - Paste your cookies into a file `cookies.json`
 
 </details>
