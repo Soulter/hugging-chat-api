@@ -226,7 +226,7 @@ class ChatBot:
 def cli():
     print("-------HuggingChat-------")
     print("1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
-    chatbot = ChatBot()
+    chatbot = ChatBot(cookie_path="cookies.json")
     running = True
     while running:
         question = input("> ")
