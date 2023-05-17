@@ -85,6 +85,6 @@ Commands in cli mode:
 - `/switch <id>` : Switches to the ID number passed.
 - `/exit` : Closes CLI environment.
 
-### Disclaimers
+## Disclaimers
 
 This is not an official [Hugging Face](https://huggingface.co/) product. This is a **personal project** and is not affiliated with [Hugging Face](https://huggingface.co/) in any way. Don't sue us.
