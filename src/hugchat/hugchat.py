@@ -1,6 +1,8 @@
 from requests import Session
 import json
 import uuid
+import logging
+
 
 class ChatBot:
     
@@ -104,13 +106,14 @@ class ChatBot:
             try:
                 resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": self.active_model}, headers=self.json_header)
                 # print(resp.text)
+                logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
                 self.conversation_id_list.append(cid)
                 return cid
             
             except BaseException as e:
                 err_count += 1
-                print(f"[Error] Failed to create new conversation. Retrying... ({err_count})")
+                logging.debug(f" Failed to create new conversation. Retrying... ({err_count})")
                 if err_count > 5:
                     raise e
                 continue
