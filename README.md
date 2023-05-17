@@ -88,3 +88,5 @@ Commands in cli mode:
 ## Disclaimers
 
 This is not an official [Hugging Face](https://huggingface.co/) product. This is a **personal project** and is not affiliated with [Hugging Face](https://huggingface.co/) in any way. Don't sue us.
+
+**Server resources are precious, it is not recommended to request this API frequently.**
