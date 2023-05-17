@@ -84,3 +84,7 @@ Commands in cli mode:
 - `/ids` : Shows a list of all ID numbers and ID strings in current session.
 - `/switch <id>` : Switches to the ID number passed.
 - `/exit` : Closes CLI environment.
+
+### Disclaimers
+
+This is not an official [Hugging Face](https://huggingface.co/) product. This is a **personal project** and is not affiliated with [Hugging Face](https://huggingface.co/) in any way. Don't sue us.
