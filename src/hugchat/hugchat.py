@@ -50,15 +50,12 @@ class ChatBot:
         _h = {
             "Accept": "*/*",
             "Connection": "keep-alive",
-
             "Host": "huggingface.co",
             "Origin": "https://huggingface.co",
             "sec-gpc": "1",
-
             "Sec-Fetch-Site": "same-origin",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Dest": "empty",
-
             "Accept-Encoding": "gzip, deflate, br",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
         }
@@ -97,8 +94,9 @@ class ChatBot:
         err_count = 0
 
         # Accept the welcome modal when init.
-        if not self.accepted_welcome_modal:
-            self.accept_ethics_modal()
+        # 17/5/2023: This is not required anymore.
+        # if not self.accepted_welcome_modal:
+        #     self.accept_ethics_modal()
 
         # Create new conversation and get a conversation id.
         resp = ""
