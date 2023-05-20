@@ -15,6 +15,14 @@ Leave a star :)
 > 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.  
 > 2. Your conversations will be shared with model authors.
 
+**Server resources are precious, it is not recommended to request this API in a high frequency.** 
+
+(`Hugging Face's CTO🤗` just liked the suggestion)
+
+<div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
+
+
+
 ## Authentication (Required Now)
 
 ### Cookies
@@ -89,4 +97,3 @@ Commands in cli mode:
 
 This is not an official [Hugging Face](https://huggingface.co/) product. This is a **personal project** and is not affiliated with [Hugging Face](https://huggingface.co/) in any way. Don't sue us.
 
-**Server resources are precious, it is not recommended to request this API frequently.**
