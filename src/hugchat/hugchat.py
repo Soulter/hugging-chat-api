@@ -1,5 +1,6 @@
 from requests import Session
 import json
+import os
 import uuid
 
 class ChatBot:
@@ -22,6 +23,8 @@ class ChatBot:
         
         if cookies is None and cookie_path != "":
             # read cookies from path
+            if not os.path.exists(cookie_path):
+                raise Exception(f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api")
             with open(cookie_path, "r") as f:
                 cookies = json.load(f)
 
@@ -78,6 +81,9 @@ class ChatBot:
         return list(self.conversation_id_list)
 
     def accept_ethics_modal(self):
+        '''
+        [Deprecated Method]
+        '''
         response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=False), cookies=self.get_cookies(), allow_redirects=True, data={
             "ethicsModalAccepted": "true",
             "shareConversationsWithModelAuthors": "true",
@@ -91,6 +97,9 @@ class ChatBot:
         return True
     
     def new_conversation(self) -> str:
+        '''
+        Create a new conversation. Return the new conversation id. You should change the conversation by calling change_conversation() after calling this method.
+        '''
         err_count = 0
 
         # Accept the welcome modal when init.
@@ -116,6 +125,9 @@ class ChatBot:
                 continue
     
     def change_conversation(self, conversation_id: str) -> bool:
+        '''
+        Change the current conversation to another one. Need a valid conversation id.
+        '''
         if conversation_id not in self.conversation_id_list:
             raise Exception("Invalid conversation id. Please check conversation id list.")
         self.current_conversation = conversation_id
@@ -123,6 +135,9 @@ class ChatBot:
     
         
     def summarize_conversation(self, conversation_id: str = None) -> str:
+        '''
+        Return a summary of the conversation.
+        '''
         if conversation_id is None:
             conversation_id = self.current_conversation
         
@@ -140,6 +155,9 @@ class ChatBot:
         raise Exception(f"Unknown server response: {response}")
     
     def share_conversation(self, conversation_id: str = None) -> str:
+        '''
+        Return a share link of the conversation.
+        '''
         if conversation_id is None:
             conversation_id = self.current_conversation
 
@@ -155,6 +173,22 @@ class ChatBot:
             return response['url']
 
         raise Exception(f"Unknown server response: {response}")
+
+    def delete_conversation(self, conversation_id: str = None) -> bool:
+        '''
+        Delete a HuggingChat conversation by conversation_id.
+        '''
+
+        if conversation_id is None:
+            raise Exception("conversation_id is required.")
+
+        headers = self.get_headers()
+
+        r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_id}", headers=headers, cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to delete conversation with status code: {r.status_code}")
+        
 
     def chat(
         self,
@@ -173,6 +207,9 @@ class ChatBot:
         is_retry: bool=False,
         retry_count: int=5,
     ):
+        '''
+        Send a message to the current conversation. Return the response text.
+        '''
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
         if self.current_conversation == "":
@@ -223,6 +260,7 @@ class ChatBot:
 
 def cli():
     print("-------HuggingChat-------")
+    print("Official Site: https://huggingface.co/chat")
     print("1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
     chatbot = ChatBot(cookie_path="cookies.json")
     running = True
