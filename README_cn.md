@@ -14,16 +14,7 @@ HuggingChat Python API
 
 ### Cookies
 
-<details>
-<summary>如何提取Cookies</summary>
-
-- 安装 [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) 或 [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) 的 cookie editor 扩展
-- 访问 [HuggingChat](https://huggingface.co/chat) 并 **登录**
-- 打开扩展程序
-- 点击右下角的"导出" (将会把内容保存到你的剪贴板上)
-- 把你剪贴板上的内容粘贴到 `cookies.json` 文件中
-
-</details>
+使用 `Login(email, passwd).main()` 来登录并获取使用RequestCookieJar对象包装的cookies
 
 ## 使用方式
 
@@ -35,6 +26,12 @@ pip install hugchat
 
 ```py
 from hugchat import hugchat
+from hugchat import Login
+import json
+
+cookies = hugchat.Login(email, passwd).main()  # 登入huggingface并获取token和hf-chat这两个cookies
+with open("cookies.json", "w") as f:
+	f.write(json.dumps(cookies.get_dict()))  # 保存cookies
 chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # 或者 cookies=[...]
 print(chatbot.chat("Hello!"))
 
@@ -56,7 +53,7 @@ conversation_list = chatbot.get_conversation_list()
 - `truncate`: Optional[int]. Default is 1024
 - `watermark`: Optional[bool]. Default is False
 - `max_new_tokens`: Optional[int]. Default is 1024
-- `stop`: Optional[list]. Default is ["</s>"]
+- `stop`: Optional[list]. Default is ["`</s>`"]
 - `return_full_text`: Optional[bool]. Default is False
 - `stream`: Optional[bool]. Default is True
 - `use_cache`: Optional[bool]. Default is False

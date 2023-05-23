@@ -10,33 +10,22 @@ HuggingChat Python API
 
 Leave a star :)
 
-> When you use this project, it means that you have agreed to the following two requirements of the HuggingChat:  
+> When you use this project, it means that you have agreed to the following two requirements of the HuggingChat:
 >
-> 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.  
+> 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
 > 2. Your conversations will be shared with model authors.
 
-**Server resources are precious, it is not recommended to request this API in a high frequency.** 
+**Server resources are precious, it is not recommended to request this API in a high frequency.**
 
 (`Hugging Face's CTO🤗` just liked the suggestion)
 
 <div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
 
-
-
 ## Authentication (Required Now)
 
 ### Cookies
 
-<details>
-<summary>How to Get Cookies ?</summary>
-
-- Install the `Cookie-Editor` extension for [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) or [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/)
-- Go to [HuggingChat](https://huggingface.co/chat) and **login**
-- Open the extension
-- Click `Export` on the bottom right, then `Export as JSON`(This saves your cookies to the clipboard)
-- Paste your cookies into a file `cookies.json`
-
-</details>
+Use `Login(email, passwd).main()` to login and get cookies with the format of RequestsCookieJar
 
 ## Usage
 
@@ -48,7 +37,13 @@ pip install hugchat
 
 ```py
 from hugchat import hugchat
-chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # or cookies=[...]
+from hugchat import Login
+import json
+
+cookies = hugchat.Login(email, passwd).main()  # sign in and grant auth to get token and hf-chat cookie using email
+with open("cookies.json", "w") as f:
+	f.write(json.dumps(cookies.get_dict()))  # save cookies from RequestsCookieJar
+chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # or cookies=cookies.get_dict()
 print(chatbot.chat("HI"))
 
 # Create a new conversation
@@ -69,7 +64,7 @@ The `chat()` function receives these parameters:
 - `truncate`: Optional[int]. Default is 1024
 - `watermark`: Optional[bool]. Default is False
 - `max_new_tokens`: Optional[int]. Default is 1024
-- `stop`: Optional[list]. Default is ["</s>"]
+- `stop`: Optional[list]. Default is ["`</s>`"]
 - `return_full_text`: Optional[bool]. Default is False
 - `stream`: Optional[bool]. Default is True
 - `use_cache`: Optional[bool]. Default is False
@@ -96,4 +91,3 @@ Commands in cli mode:
 ## Disclaimers
 
 This is not an official [Hugging Face](https://huggingface.co/) product. This is a **personal project** and is not affiliated with [Hugging Face](https://huggingface.co/) in any way. Don't sue us.
-
