@@ -1,321 +1,436 @@
 from requests import Session
+import requests
 import json
 import os
 import uuid
 import logging
+import re
+import getpass
 
+class Login:
+	def __init__(self, email: str, passwd: str) -> None:
+		self.email: str = email
+		self.passwd: str = passwd
+		self.headers = {
+			"Referer": "https://huggingface.co/",
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
+		}
+		self.cookies = requests.sessions.RequestsCookieJar()
+		
+	def requestsGet(self, url:str, params=None, allow_redirects=True) -> requests.Response:
+		res = requests.get(
+			url,
+			params=params, 
+			headers=self.headers, 
+			cookies=self.cookies, 
+			allow_redirects=allow_redirects,
+			)
+		self.refreshCookies(res.cookies)
+		return res
+	
+	def requestsPost(self, url:str, headers=None, params=None, data=None, stream=False, allow_redirects=True) -> requests.Response:
+		res = requests.post(
+			url,
+			stream=stream, 
+			params=params, 
+			data=data, 
+			headers=self.headers if headers == None else headers, 
+			cookies=self.cookies, 
+			allow_redirects=allow_redirects
+			)
+		self.refreshCookies(res.cookies)
+		return res
+				
+	def refreshCookies(self, cookies:requests.sessions.RequestsCookieJar):
+		dic = cookies.get_dict()
+		for i in dic:
+			self.cookies.set(i, dic[i])
+
+	def SigninWithEmail(self):
+		url = "https://huggingface.co/login"
+		data = {
+			"username": self.email,
+			"password": self.passwd,
+		}
+		res = self.requestsPost(url=url, data=data, allow_redirects=False)
+		if res.status_code == 400:
+			raise Exception("wrong username or password")
+
+	def getAuthURL(self) -> str | None:
+		url = "https://huggingface.co/chat/login"
+		headers = {
+			"Referer": "https://huggingface.co/chat/login",
+			"User-Agent": self.headers["User-Agent"],
+			"Content-Type": "application/x-www-form-urlencoded"
+		}
+		res = self.requestsPost(url, headers=headers, allow_redirects=False)
+		if res.status_code == 200:
+			# location = res.headers.get("Location", None)
+			location = res.json()["location"]
+			if location:
+				return location
+			else:
+				raise Exception("No authorize url!")
+		elif res.status_code == 303:
+			location = res.headers.get("Location")
+			if location:
+				return location
+			else:
+				raise Exception("No authorize url!")
+		else:
+			raise Exception("Something went wrong!")
+	
+	def grantAuth(self, url: str) -> int:
+		res = self.requestsGet(url)
+		if res.status_code != 200:
+			raise Exception("grant auth fatal!")
+		csrf = re.findall('/oauth/authorize.*?name="csrf" value="(.*?)"', res.text)
+		if len(csrf) == 0:
+			raise Exception("No csrf found!")
+		data = {
+			"csrf":csrf[0]
+		}
+
+		res = self.requestsPost(url, data=data, allow_redirects=False)
+		if res.status_code != 303:
+			raise Exception(f"get hf-chat cookies fatal! - {res.status_code}")
+		else:
+			location = res.headers.get("Location")
+		res = self.requestsGet(location, allow_redirects=False)
+		if res.status_code != 302:
+			raise Exception(f"get hf-chat cookie fatal! - {res.status_code}")
+		else:
+			return 1
+	
+	def main(self) -> requests.sessions.RequestsCookieJar:
+		self.SigninWithEmail()
+		location = self.getAuthURL()
+		if self.grantAuth(location):
+			print("done")
+		return self.cookies
 
 class ChatBot:
-    
-    cookies: dict
-    """Cookies for authentication"""
+	
+	cookies: dict
+	"""Cookies for authentication"""
 
-    session: Session
-    """HuggingChat session"""
+	session: Session
+	"""HuggingChat session"""
 
-    def __init__(
-        self,
-        cookies: dict = None,
-        cookie_path: str = ""
-    ) -> None:
-        if cookies is None and cookie_path == "":
-            raise Exception("Authentication is required now, but no cookies provided")
-        elif cookies is not None and cookie_path != "":
-            raise Exception("Both cookies and cookie_path provided")
-        
-        if cookies is None and cookie_path != "":
-            # read cookies from path
-            if not os.path.exists(cookie_path):
-                raise Exception(f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api")
-            with open(cookie_path, "r") as f:
-                cookies = json.load(f)
+	def __init__(
+		self,
+		cookies: dict = None,
+		cookie_path: str = ""
+	) -> None:
+		if cookies is None and cookie_path == "":
+			raise Exception("Authentication is required now, but no cookies provided")
+		elif cookies is not None and cookie_path != "":
+			raise Exception("Both cookies and cookie_path provided")
+		
+		if cookies is None and cookie_path != "":
+			# read cookies from path
+			if not os.path.exists(cookie_path):
+				raise Exception(f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api")
+			with open(cookie_path, "r") as f:
+				cookies = json.load(f)
 
-        # convert cookies to KV format
-        if isinstance(cookies, list):
-            cookies = {cookie["name"]: cookie["value"] for cookie in cookies}
+		# convert cookies to KV format
+		if isinstance(cookies, list):
+			cookies = {cookie["name"]: cookie["value"] for cookie in cookies}
 
-        self.cookies = cookies
+		self.cookies = cookies
 
-        self.hf_base_url = "https://huggingface.co"
-        self.json_header = {"Content-Type": "application/json"}
-        self.session = self.get_hc_session()
-        self.conversation_id_list = []
-        self.active_model = "OpenAssistant/oasst-sft-6-llama-30b-xor"
-        self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
-        self.current_conversation = self.new_conversation()
+		self.hf_base_url = "https://huggingface.co"
+		self.json_header = {"Content-Type": "application/json"}
+		self.session = self.get_hc_session()
+		self.conversation_id_list = []
+		self.active_model = "OpenAssistant/oasst-sft-6-llama-30b-xor"
+		self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
+		self.current_conversation = self.new_conversation()
 
-    def get_hc_session(self) -> Session:
-        session = Session()
-        # set cookies
-        session.cookies.update(self.cookies)
-        session.get(self.hf_base_url + "/chat")
-        return session
-    
-    def get_headers(self, ref=True) -> dict:
-        _h = {
-            "Accept": "*/*",
-            "Connection": "keep-alive",
-            "Host": "huggingface.co",
-            "Origin": "https://huggingface.co",
-            "sec-gpc": "1",
-            "Sec-Fetch-Site": "same-origin",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Dest": "empty",
-            "Accept-Encoding": "gzip, deflate, br",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
-        }
-        if ref:
-            _h["Referer"] = f"https://huggingface.co/chat/conversation/{self.current_conversation}"
-        return _h
-    
-    def get_cookies(self) -> dict:
-        return self.session.cookies.get_dict()
-    
 
-    # NOTE: To create a copy when calling this, call it inside of list().
-    #       If not, when updating or altering the values in the variable will
-    #       also be applied to this class's variable.
-    #       This behaviour is with any function returning self.<var_name>. It
-    #       acts as a pointer to the data in the object.
-    #
-    # Returns a pointer to this objects list that contains id of conversations.
-    def get_conversation_list(self) -> list:
-        return list(self.conversation_id_list)
+	def get_hc_session(self) -> Session:
+		session = Session()
+		# set cookies
+		session.cookies.update(self.cookies)
+		session.get(self.hf_base_url + "/chat")
+		return session
+	
+	def get_headers(self, ref=True) -> dict:
+		_h = {
+			"Accept": "*/*",
+			"Connection": "keep-alive",
+			"Host": "huggingface.co",
+			"Origin": "https://huggingface.co",
+			"sec-gpc": "1",
+			"Sec-Fetch-Site": "same-origin",
+			"Sec-Fetch-Mode": "cors",
+			"Sec-Fetch-Dest": "empty",
+			"Accept-Encoding": "gzip, deflate, br",
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+		}
+		if ref:
+			_h["Referer"] = f"https://huggingface.co/chat/conversation/{self.current_conversation}"
+		return _h
+	
+	def get_cookies(self) -> dict:
+		return self.session.cookies.get_dict()
+	
 
-    def accept_ethics_modal(self):
-        '''
-        [Deprecated Method]
-        '''
-        response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=False), cookies=self.get_cookies(), allow_redirects=True, data={
-            "ethicsModalAccepted": "true",
-            "shareConversationsWithModelAuthors": "true",
-            "ethicsModalAcceptedAt": "",
-            "activeModel": str(self.active_model)
-        })
+	# NOTE: To create a copy when calling this, call it inside of list().
+	#       If not, when updating or altering the values in the variable will
+	#       also be applied to this class's variable.
+	#       This behaviour is with any function returning self.<var_name>. It
+	#       acts as a pointer to the data in the object.
+	#
+	# Returns a pointer to this objects list that contains id of conversations.
+	def get_conversation_list(self) -> list:
+		return list(self.conversation_id_list)
 
-        if response.status_code != 200:
-            raise Exception(f"Failed to accept ethics modal with status code {response.status_code}. {response.content.decode()}")
-        
-        return True
-    
-    def new_conversation(self) -> str:
-        '''
-        Create a new conversation. Return the new conversation id. You should change the conversation by calling change_conversation() after calling this method.
-        '''
-        err_count = 0
+	def accept_ethics_modal(self):
+		'''
+		[Deprecated Method]
+		'''
+		response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=False), cookies=self.get_cookies(), allow_redirects=True, data={
+			"ethicsModalAccepted": "true",
+			"shareConversationsWithModelAuthors": "true",
+			"ethicsModalAcceptedAt": "",
+			"activeModel": str(self.active_model)
+		})
 
-        # Accept the welcome modal when init.
-        # 17/5/2023: This is not required anymore.
-        # if not self.accepted_welcome_modal:
-        #     self.accept_ethics_modal()
+		if response.status_code != 200:
+			raise Exception(f"Failed to accept ethics modal with status code {response.status_code}. {response.content.decode()}")
+		
+		return True
+	
+	def new_conversation(self) -> str:
+		'''
+		Create a new conversation. Return the new conversation id. You should change the conversation by calling change_conversation() after calling this method.
+		'''
+		err_count = 0
 
-        # Create new conversation and get a conversation id.
-        resp = ""
-        while True:
-            try:
-                resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": self.active_model}, headers=self.json_header)
-                # print(resp.text)
-                logging.debug(resp.text)
-                cid = json.loads(resp.text)['conversationId']
-                self.conversation_id_list.append(cid)
-                return cid
-            
-            except BaseException as e:
-                err_count += 1
-                logging.debug(f" Failed to create new conversation. Retrying... ({err_count})")
-                if err_count > 5:
-                    raise e
-                continue
-    
-    def change_conversation(self, conversation_id: str) -> bool:
-        '''
-        Change the current conversation to another one. Need a valid conversation id.
-        '''
-        if conversation_id not in self.conversation_id_list:
-            raise Exception("Invalid conversation id. Please check conversation id list.")
-        self.current_conversation = conversation_id
-        return True
-    
-        
-    def summarize_conversation(self, conversation_id: str = None) -> str:
-        '''
-        Return a summary of the conversation.
-        '''
-        if conversation_id is None:
-            conversation_id = self.current_conversation
-        
-        headers = self.get_headers()
+		# Accept the welcome modal when init.
+		# 17/5/2023: This is not required anymore.
+		# if not self.accepted_welcome_modal:
+		#     self.accept_ethics_modal()
 
-        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/summarize", headers=headers, cookies=self.get_cookies())
-        
-        if r.status_code != 200:
-            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
-        
-        response = r.json()
-        if 'title' in response:
-            return response['title']
+		# Create new conversation and get a conversation id.
+		resp = ""
+		while True:
+			try:
+				resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": self.active_model}, headers=self.json_header)
+				# print(resp.text)
+				logging.debug(resp.text)
+				cid = json.loads(resp.text)['conversationId']
+				self.conversation_id_list.append(cid)
+				return cid
+			
+			except BaseException as e:
+				err_count += 1
+				logging.debug(f" Failed to create new conversation. Retrying... ({err_count})")
+				if err_count > 5:
+					raise e
+				continue
+	
+	def change_conversation(self, conversation_id: str) -> bool:
+		'''
+		Change the current conversation to another one. Need a valid conversation id.
+		'''
+		if conversation_id not in self.conversation_id_list:
+			raise Exception("Invalid conversation id. Please check conversation id list.")
+		self.current_conversation = conversation_id
+		return True
+	
+		
+	def summarize_conversation(self, conversation_id: str = None) -> str:
+		'''
+		Return a summary of the conversation.
+		'''
+		if conversation_id is None:
+			conversation_id = self.current_conversation
+		
+		headers = self.get_headers()
 
-        raise Exception(f"Unknown server response: {response}")
-    
-    def share_conversation(self, conversation_id: str = None) -> str:
-        '''
-        Return a share link of the conversation.
-        '''
-        if conversation_id is None:
-            conversation_id = self.current_conversation
+		r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/summarize", headers=headers, cookies=self.get_cookies())
+		
+		if r.status_code != 200:
+			raise Exception(f"Failed to send chat message with status code: {r.status_code}")
+		
+		response = r.json()
+		if 'title' in response:
+			return response['title']
 
-        headers = self.get_headers()
-        
-        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/share", headers=headers, cookies=self.get_cookies())
-        
-        if r.status_code != 200:
-            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
-        
-        response = r.json()
-        if 'url' in response:
-            return response['url']
+		raise Exception(f"Unknown server response: {response}")
+	
+	def share_conversation(self, conversation_id: str = None) -> str:
+		'''
+		Return a share link of the conversation.
+		'''
+		if conversation_id is None:
+			conversation_id = self.current_conversation
 
-        raise Exception(f"Unknown server response: {response}")
+		headers = self.get_headers()
+		
+		r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/share", headers=headers, cookies=self.get_cookies())
+		
+		if r.status_code != 200:
+			raise Exception(f"Failed to send chat message with status code: {r.status_code}")
+		
+		response = r.json()
+		if 'url' in response:
+			return response['url']
 
-    def delete_conversation(self, conversation_id: str = None) -> bool:
-        '''
-        Delete a HuggingChat conversation by conversation_id.
-        '''
+		raise Exception(f"Unknown server response: {response}")
 
-        if conversation_id is None:
-            raise Exception("conversation_id is required.")
+	def delete_conversation(self, conversation_id: str = None) -> bool:
+		'''
+		Delete a HuggingChat conversation by conversation_id.
+		'''
 
-        headers = self.get_headers()
+		if conversation_id is None:
+			raise Exception("conversation_id is required.")
 
-        r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_id}", headers=headers, cookies=self.get_cookies())
+		headers = self.get_headers()
 
-        if r.status_code != 200:
-            raise Exception(f"Failed to delete conversation with status code: {r.status_code}")
-        
+		r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_id}", headers=headers, cookies=self.get_cookies())
 
-    def chat(
-        self,
-        text: str,
-        temperature: float=0.9,
-        top_p: float=0.95,
-        repetition_penalty: float=1.2,
-        top_k: int=50,
-        truncate: int=1024,
-        watermark: bool=False,
-        max_new_tokens: int=1024,
-        stop: list=["</s>"],
-        return_full_text: bool=False,
-        stream: bool=True,
-        use_cache: bool=False,
-        is_retry: bool=False,
-        retry_count: int=5,
-    ):
-        '''
-        Send a message to the current conversation. Return the response text.
-        '''
-        if retry_count <= 0:
-            raise Exception("the parameter retry_count must be greater than 0.")
-        if self.current_conversation == "":
-            self.current_conversation = self.new_conversation()
-        req_json = {
-            "inputs": text,
-            "parameters": {
-                "temperature": temperature,
-                "top_p": top_p,
-                "repetition_penalty": repetition_penalty,
-                "top_k": top_k,
-                "truncate": truncate,
-                "watermark": watermark,
-                "max_new_tokens": max_new_tokens,
-                "stop": stop,
-                "return_full_text": return_full_text,
-                "stream": stream,
-            },
-            "options": {
-                    "use_cache": use_cache,
-                    "is_retry": is_retry,
-                    "id": str(uuid.uuid4()),
-            },
-        }
-        # print(req_json)
-        # print(self.session.cookies.get_dict())
-        # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
-        headers = self.get_headers(ref=True)
+		if r.status_code != 200:
+			raise Exception(f"Failed to delete conversation with status code: {r.status_code}")
+		
 
-        while retry_count > 0:
-            resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
-            res_text = ""
+	def chat(
+		self,
+		text: str,
+		temperature: float=0.9,
+		top_p: float=0.95,
+		repetition_penalty: float=1.2,
+		top_k: int=50,
+		truncate: int=1024,
+		watermark: bool=False,
+		max_new_tokens: int=1024,
+		stop: list=["</s>"],
+		return_full_text: bool=False,
+		stream: bool=True,
+		use_cache: bool=False,
+		is_retry: bool=False,
+		retry_count: int=5,
+	):
+		'''
+		Send a message to the current conversation. Return the response text.
+		'''
+		if retry_count <= 0:
+			raise Exception("the parameter retry_count must be greater than 0.")
+		if self.current_conversation == "":
+			self.current_conversation = self.new_conversation()
+		req_json = {
+			"inputs": text,
+			"parameters": {
+				"temperature": temperature,
+				"top_p": top_p,
+				"repetition_penalty": repetition_penalty,
+				"top_k": top_k,
+				"truncate": truncate,
+				"watermark": watermark,
+				"max_new_tokens": max_new_tokens,
+				"stop": stop,
+				"return_full_text": return_full_text,
+				"stream": stream,
+			},
+			"options": {
+					"use_cache": use_cache,
+					"is_retry": is_retry,
+					"id": str(uuid.uuid4()),
+			},
+		}
+		# print(req_json)
+		# print(self.session.cookies.get_dict())
+		# print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
+		headers = self.get_headers(ref=True)
 
-            if resp.status_code != 200:
-                retry_count -= 1
-                if retry_count <= 0:
-                    raise Exception(f"Failed to chat. ({resp.status_code})")
+		while retry_count > 0:
+			resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
+			res_text = ""
 
-            for line in resp.iter_lines():
-                if line:
-                    res = line.decode("utf-8")
-                    obj = json.loads(res[1:-1])
-                    if "generated_text" in obj:
-                        res_text += obj["generated_text"]
-                    elif "error" in obj:
-                        raise Exception(obj["error"])
-            return res_text
+			if resp.status_code != 200:
+				retry_count -= 1
+				if retry_count <= 0:
+					raise Exception(f"Failed to chat. ({resp.status_code})")
+
+			for line in resp.iter_lines():
+				if line:
+					res = line.decode("utf-8")
+					obj = json.loads(res[1:-1])
+					if "generated_text" in obj:
+						res_text += obj["generated_text"]
+					elif "error" in obj:
+						raise Exception(obj["error"])
+			return res_text
 
 def cli():
-    print("-------HuggingChat-------")
-    print("Official Site: https://huggingface.co/chat")
-    print("1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
-    chatbot = ChatBot(cookie_path="cookies.json")
-    running = True
-    while running:
-        question = input("> ")
-        if question == "/new":
-            cid = chatbot.new_conversation()
-            print("The new conversation ID is: " + cid)
-            chatbot.change_conversation(cid)
-            print("Conversation changed successfully.")
-            continue
-        
-        elif question.startswith("/switch"):
-            try:
-                conversations = chatbot.get_conversation_list()
-                conversation_id = str(question.split(" ")[1] if len(question.split(" ")) > 1 else "")
-                if conversation_id not in conversations:
-                    print("# Please enter a valid ID number.")
-                    print(f"# Sessions include: {conversations}")
-                else:
-                    chatbot.change_conversation(conversation_id)
-                    print(f"# Conversation switched successfully to {conversation_id}")
-            except ValueError:
-                print("# Please enter a valid ID number\n")
-            
-            
-        
-        elif question == "/ids":
-            id_list = list(chatbot.get_conversation_list())
-            [print(f"{id_list.index(i)+1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in id_list]
-        
-        elif question in ["/exit", "/quit","/close"]:
-            running = False
-        
-        elif question.startswith("/"):
-            print("# Invalid command")
-        
-        elif question == "":
-            pass
+	print("-------HuggingChat-------")
+	print("Official Site: https://huggingface.co/chat")
+	print("1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
+	COOKIE_PATH = "cookies.json"
+	if not os.path.exists(COOKIE_PATH):
+		print("No cookies detected, please login.")
+		email = input("Hugging-chat email: ")
+		passwd = getpass.getpass("Password: ")
+		print("Wait for a sec...")
+		cookies = Login(email, passwd).main()
+		with open("cookies.json", "w") as f:
+			f.write(json.dumps(cookies.get_dict()))
 
-        else:
-            res = chatbot.chat(question)
-            print("< " + res)
-    
+	chatbot = ChatBot(cookie_path=COOKIE_PATH)
+	running = True
+	while running:
+		question = input("> ")
+		if question == "/new":
+			cid = chatbot.new_conversation()
+			print("The new conversation ID is: " + cid)
+			chatbot.change_conversation(cid)
+			print("Conversation changed successfully.")
+			continue
+		
+		elif question.startswith("/switch"):
+			try:
+				conversations = chatbot.get_conversation_list()
+				conversation_id = str(question.split(" ")[1] if len(question.split(" ")) > 1 else "")
+				if conversation_id not in conversations:
+					print("# Please enter a valid ID number.")
+					print(f"# Sessions include: {conversations}")
+				else:
+					chatbot.change_conversation(conversation_id)
+					print(f"# Conversation switched successfully to {conversation_id}")
+			except ValueError:
+				print("# Please enter a valid ID number\n")
+			
+			
+		
+		elif question == "/ids":
+			id_list = list(chatbot.get_conversation_list())
+			[print(f"{id_list.index(i)+1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in id_list]
+		
+		elif question in ["/exit", "/quit","/close"]:
+			running = False
+		
+		elif question.startswith("/"):
+			print("# Invalid command")
+		
+		elif question == "":
+			pass
+
+		else:
+			res = chatbot.chat(question)
+			print("< " + res)
+	
 
 if __name__ == "__main__":
-    bot = ChatBot()
-    message_content = bot.chat("Hello", max_new_tokens=10)
-    print(message_content)
-    summary = bot.summarize_conversation()
-    print(summary)
-    sharelink = bot.share_conversation()
-    print(sharelink)
+	bot = ChatBot()
+	message_content = bot.chat("Hello", max_new_tokens=10)
+	print(message_content)
+	summary = bot.summarize_conversation()
+	print(summary)
+	sharelink = bot.share_conversation()
+	print(sharelink)
 
-    cli()
+	cli()
