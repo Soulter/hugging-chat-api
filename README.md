@@ -53,6 +53,7 @@ from hugchat.login import Login
 # Log in to huggingface and grant authorization to huggingchat
 sign = login.Login(email, passwd)
 cookies = sign.login()
+
 # Save cookies to usercookies/<email>.json
 sign.saveCookies()
 
