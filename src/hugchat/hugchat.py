@@ -6,7 +6,6 @@ import uuid
 import logging
 import re
 import getpass
-import login
 
 class ChatBot:
     

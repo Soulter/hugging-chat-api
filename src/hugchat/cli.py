@@ -7,8 +7,8 @@ python -m hugchat.cli
 to start cli.
 """
 
-from hugchat import ChatBot
-from login import Login
+from .hugchat import ChatBot
+from .login import Login
 import getpass
 import argparse
 
