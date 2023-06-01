@@ -23,9 +23,20 @@ Leave a star :)
 
 ## Authentication (Required Now)
 
-### Cookies
+### Get Cookies
 
-Use `Login(email, passwd).main()` to login and get cookies with the format of RequestsCookieJar
+```python
+from hugchat import login
+
+# login
+sign = login(email, passwd)
+cookies = sign.login()
+sign.saveCookies()
+
+# load cookies from usercookies/<email>.json
+sign = login(email, None)
+cookies = sign.loadCookies() # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
+```
 
 ## Usage
 
@@ -37,13 +48,16 @@ pip install hugchat
 
 ```py
 from hugchat import hugchat
-from hugchat import Login
-import json
+from hugchat.login import Login
 
-cookies = hugchat.Login(email, passwd).main()  # sign in and grant auth to get token and hf-chat cookie using email
-with open("cookies.json", "w") as f:
-	f.write(json.dumps(cookies.get_dict()))  # save cookies from RequestsCookieJar
-chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # or cookies=cookies.get_dict()
+# Log in to huggingface and grant authorization to huggingchat
+sign = login.Login(email, passwd)
+cookies = sign.login()
+# Save cookies to usercookies/<email>.json
+sign.saveCookies()
+
+# Create a ChatBot
+chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
 print(chatbot.chat("HI"))
 
 # Create a new conversation
