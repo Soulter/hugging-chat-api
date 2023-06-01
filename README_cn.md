@@ -12,9 +12,20 @@ HuggingChat Python API
 
 ## 鉴权 (必需)
 
-### Cookies
+### 获取Cookies
 
-使用 `Login(email, passwd).main()` 来登录并获取使用RequestCookieJar对象包装的cookies
+```python
+from hugchat import login
+
+# login
+sign = login(email, passwd)
+cookies = sign.login()
+sign.saveCookies()
+
+# load cookies from usercookies/<email>.json
+sign = login(email, None)
+cookies = sign.loadCookies() # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
+```
 
 ## 使用方式
 
@@ -26,20 +37,23 @@ pip install hugchat
 
 ```py
 from hugchat import hugchat
-from hugchat import Login
-import json
+from hugchat.login import Login
 
-cookies = hugchat.Login(email, passwd).main()  # 登入huggingface并获取token和hf-chat这两个cookies
-with open("cookies.json", "w") as f:
-	f.write(json.dumps(cookies.get_dict()))  # 保存cookies
-chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # 或者 cookies=[...]
-print(chatbot.chat("Hello!"))
+# 登入huggingface授权huggingchat
+sign = login.Login(email, passwd)
+cookies = sign.login()
+# 保存cookies至 usercookies/<email>.json
+sign.saveCookies()
 
-# 创建一个新的会话
+# 创建一个 ChatBot
+chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
+print(chatbot.chat("HI"))
+
+# 创建一个新会话
 id = chatbot.new_conversation()
 chatbot.change_conversation(id)
 
-# 获取会话列表
+# 获取对话列表
 conversation_list = chatbot.get_conversation_list()
 ```
 
