@@ -26,10 +26,10 @@ Leave a star :)
 ### Get Cookies
 
 ```python
-from hugchat import login
+from hugchat.login import Login
 
 # login
-sign = login(email, passwd)
+sign = Login(email, passwd)
 cookies = sign.login()
 sign.saveCookies()
 
@@ -51,7 +51,7 @@ from hugchat import hugchat
 from hugchat.login import Login
 
 # Log in to huggingface and grant authorization to huggingchat
-sign = login.Login(email, passwd)
+sign = Login(email, passwd)
 cookies = sign.login()
 
 # Save cookies to usercookies/<email>.json
