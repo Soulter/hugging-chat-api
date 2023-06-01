@@ -15,10 +15,10 @@ HuggingChat Python API
 ### 获取Cookies
 
 ```python
-from hugchat import login
+from hugchat.login import Login
 
 # 登录
-sign = login(email, passwd)
+sign = Login(email, passwd)
 cookies = sign.login()
 sign.saveCookies()
 
@@ -41,7 +41,7 @@ from hugchat import hugchat
 from hugchat.login import Login
 
 # 登入huggingface授权huggingchat
-sign = login.Login(email, passwd)
+sign = Login(email, passwd)
 cookies = sign.login()
 
 # 保存cookies至 usercookies/<email>.json
