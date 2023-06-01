@@ -17,14 +17,15 @@ HuggingChat Python API
 ```python
 from hugchat import login
 
-# login
+# 登录
 sign = login(email, passwd)
 cookies = sign.login()
 sign.saveCookies()
 
-# load cookies from usercookies/<email>.json
+# 从 usercookies/<email>.json 中加载已保存的cookies
 sign = login(email, None)
-cookies = sign.loadCookies() # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
+cookies = sign.loadCookies() # 这个方法会查询保存cookies的文件是否存在，存在就返回cookies，不存在就报错
+
 ```
 
 ## 使用方式
@@ -42,6 +43,7 @@ from hugchat.login import Login
 # 登入huggingface授权huggingchat
 sign = login.Login(email, passwd)
 cookies = sign.login()
+
 # 保存cookies至 usercookies/<email>.json
 sign.saveCookies()
 
