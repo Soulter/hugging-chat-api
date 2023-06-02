@@ -12,18 +12,21 @@ HuggingChat Python API
 
 ## 鉴权 (必需)
 
-### Cookies
+### 获取Cookies
 
-<details>
-<summary>如何提取Cookies</summary>
+```python
+from hugchat.login import Login
 
-- 安装 [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm) 或 [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) 的 cookie editor 扩展
-- 访问 [HuggingChat](https://huggingface.co/chat) 并 **登录**
-- 打开扩展程序
-- 点击右下角的"导出" (将会把内容保存到你的剪贴板上)
-- 把你剪贴板上的内容粘贴到 `cookies.json` 文件中
+# 登录
+sign = Login(email, passwd)
+cookies = sign.login()
+sign.saveCookies()
 
-</details>
+# 从 usercookies/<email>.json 中加载已保存的cookies
+sign = login(email, None)
+cookies = sign.loadCookies() # 这个方法会查询保存cookies的文件是否存在，存在就返回cookies，不存在就报错
+
+```
 
 ## 使用方式
 
@@ -35,14 +38,24 @@ pip install hugchat
 
 ```py
 from hugchat import hugchat
-chatbot = hugchat.ChatBot(cookie_path="cookies.json")  # 或者 cookies=[...]
-print(chatbot.chat("Hello!"))
+from hugchat.login import Login
 
-# 创建一个新的会话
+# 登入huggingface授权huggingchat
+sign = Login(email, passwd)
+cookies = sign.login()
+
+# 保存cookies至 usercookies/<email>.json
+sign.saveCookies()
+
+# 创建一个 ChatBot
+chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
+print(chatbot.chat("HI"))
+
+# 创建一个新会话
 id = chatbot.new_conversation()
 chatbot.change_conversation(id)
 
-# 获取会话列表
+# 获取对话列表
 conversation_list = chatbot.get_conversation_list()
 ```
 
@@ -56,7 +69,7 @@ conversation_list = chatbot.get_conversation_list()
 - `truncate`: Optional[int]. Default is 1024
 - `watermark`: Optional[bool]. Default is False
 - `max_new_tokens`: Optional[int]. Default is 1024
-- `stop`: Optional[list]. Default is ["</s>"]
+- `stop`: Optional[list]. Default is ["`</s>`"]
 - `return_full_text`: Optional[bool]. Default is False
 - `stream`: Optional[bool]. Default is True
 - `use_cache`: Optional[bool]. Default is False
