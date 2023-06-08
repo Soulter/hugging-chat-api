@@ -23,14 +23,14 @@ class ChatBot:
         cookie_path: str = ""
     ) -> None:
         if cookies is None and cookie_path == "":
-            raise Exception("Authentication is required now, but no cookies provided")
+            raise ChatBotInitError("Authentication is required now, but no cookies provided")
         elif cookies is not None and cookie_path != "":
-            raise Exception("Both cookies and cookie_path provided")
+            raise ChatBotInitError("Both cookies and cookie_path provided")
         
         if cookies is None and cookie_path != "":
             # read cookies from path
             if not os.path.exists(cookie_path):
-                raise Exception(f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api")
+                raise ChatBotInitError(f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api")
             with open(cookie_path, "r") as f:
                 cookies = json.load(f)
 
@@ -129,7 +129,7 @@ class ChatBot:
                 err_count += 1
                 logging.debug(f" Failed to create new conversation. Retrying... ({err_count})")
                 if err_count > 5:
-                    raise e
+                    raise CreateConversationError(f"Failed to create new conversation. ({err_count})")
                 continue
     
     def change_conversation(self, conversation_id: str) -> bool:
@@ -137,7 +137,7 @@ class ChatBot:
         Change the current conversation to another one. Need a valid conversation id.
         '''
         if conversation_id not in self.conversation_id_list:
-            raise Exception("Invalid conversation id. Please check conversation id list.")
+            raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
         self.current_conversation = conversation_id
         return True
     
@@ -188,14 +188,14 @@ class ChatBot:
         '''
 
         if conversation_id is None:
-            raise Exception("conversation_id is required.")
+            raise DeleteConversationError("conversation_id is required.")
 
         headers = self.get_headers()
 
         r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_id}", headers=headers, cookies=self.get_cookies())
 
         if r.status_code != 200:
-            raise Exception(f"Failed to delete conversation with status code: {r.status_code}")
+            raise DeleteConversationError(f"Failed to delete conversation with status code: {r.status_code}")
         
 
     def chat(
@@ -254,7 +254,7 @@ class ChatBot:
             if resp.status_code != 200:
                 retry_count -= 1
                 if retry_count <= 0:
-                    raise Exception(f"Failed to chat. ({resp.status_code})")
+                    raise ChatError(f"Failed to chat. ({resp.status_code})")
 
             for line in resp.iter_lines():
                 if line:
@@ -264,14 +264,13 @@ class ChatBot:
                     except:
                         if "{\"error\":\"Model is overloaded\"" in res:
                             raise ModelOverloadedError("Model is overloaded, please try again later.")
-                        raise Exception(f"Failed to parse response: {res}")
+                        raise ChatError(f"Failed to parse response: {res}")
                     if "generated_text" in obj:
                         res_text += obj["generated_text"]
                     elif "error" in obj:
-                        raise Exception(obj["error"])
+                        raise ChatError(obj["error"])
             return res_text
 
-    
 
 if __name__ == "__main__":
     bot = ChatBot()
