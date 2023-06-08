@@ -7,6 +7,8 @@ import logging
 import re
 import getpass
 
+from .exceptions import *
+
 class ChatBot:
     
     cookies: dict
@@ -257,7 +259,12 @@ class ChatBot:
             for line in resp.iter_lines():
                 if line:
                     res = line.decode("utf-8")
-                    obj = json.loads(res[1:-1])
+                    try:
+                        obj = json.loads(res[1:-1])
+                    except:
+                        if "{\"error\":\"Model is overloaded\"" in res:
+                            raise ModelOverloadedError("Model is overloaded, please try again later.")
+                        raise Exception(f"Failed to parse response: {res}")
                     if "generated_text" in obj:
                         res_text += obj["generated_text"]
                     elif "error" in obj:
