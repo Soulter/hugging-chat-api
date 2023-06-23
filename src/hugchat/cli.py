@@ -11,10 +11,14 @@ from .hugchat import ChatBot
 from .login import Login
 import getpass
 import argparse
+import os
 
-EMAIL = ""
-PASSWD = ""
+EMAIL = os.getenv("EMAIL")
+PASSWD = os.getenv("PASSWD")
 CHECK_BEFORE_PASSWORD = True
+
+
+# COOKIE_PATH_DIR = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
 
 def cli():
     global EMAIL
@@ -22,7 +26,8 @@ def cli():
     global CHECK_BEFORE_PASSWORD
     print("-------HuggingChat-------")
     print("Official Site: https://huggingface.co/chat")
-    print("1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
+    print(
+        "1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-u",
@@ -42,7 +47,7 @@ def cli():
         if not email:
             email = EMAIL
         try:
-            cookies = Login(email, None).loadCookies()
+            cookies = Login(email, None).loadCookiesFromDir()
         except Exception as e:
             pass
     if not cookies or inputpass:
@@ -59,17 +64,17 @@ def cli():
                 passwd = getpass.getpass("Password: ")
             else:
                 passwd = PASSWD
-
+        
         print(f"Sign in as :{email}")
         sign = Login(email, passwd)
         try:
-            cookies = sign.loadCookies()
+            cookies = sign.loadCookiesFromDir()
         except Exception as e:
             print(e)
             print("Logging in...")
             cookies = sign.login()
-            sign.saveCookies()
-
+            sign.saveCookiesToDir()
+    
     chatbot = ChatBot(cookies=cookies)
     running = True
     while running:
@@ -93,14 +98,13 @@ def cli():
                     print(f"# Conversation switched successfully to {conversation_id}")
             except ValueError:
                 print("# Please enter a valid ID number\n")
-            
-            
         
         elif question == "/ids":
             id_list = list(chatbot.get_conversation_list())
-            [print(f"{id_list.index(i)+1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in id_list]
+            [print(f"{id_list.index(i) + 1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in
+             id_list]
         
-        elif question in ["/exit", "/quit","/close"]:
+        elif question in ["/exit", "/quit", "/close"]:
             running = False
         
         elif question.startswith("/"):
@@ -108,11 +112,11 @@ def cli():
         
         elif question == "":
             pass
-
+        
         else:
             res = chatbot.chat(question)
             print("< " + res)
-    
+
 
 if __name__ == '__main__':
     cli()
