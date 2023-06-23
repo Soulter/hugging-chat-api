@@ -4,3 +4,6 @@ cookies.json
 test.py
 dist/*
 *.egg-info
+
+.idea/
+usercookies/

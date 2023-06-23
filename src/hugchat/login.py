@@ -7,12 +7,14 @@ import re
 
 class Login:
     def __init__(self, email: str, passwd: str) -> None:
-        self.COOKIE_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
-        self.COOKIE_PATH = self.COOKIE_DIR + f"/{email}.json"
-        if not os.path.exists(self.COOKIE_DIR):
-            logging.debug("Cookie directory not found, creating...")
-            os.makedirs(self.COOKIE_DIR)
-        logging.debug(f"Cookie store path: {self.COOKIE_DIR}")
+        # self.COOKIE_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
+        # self.COOKIE_PATH = self.COOKIE_DIR + f"/{email}.json"
+        # if not os.path.exists(self.COOKIE_DIR):
+        #     logging.debug("Cookie directory not found, creating...")
+        #     os.makedirs(self.COOKIE_DIR)
+        # logging.debug(f"Cookie store path: {self.COOKIE_DIR}")
+        self.DEFAULT_PATH_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
+        self.DEFAULT_COOKIE_PATH = self.DEFAULT_PATH_DIR + f"/{email}.json"
 
         self.email: str = email
         self.passwd: str = passwd
@@ -22,30 +24,30 @@ class Login:
         }
         self.cookies = requests.sessions.RequestsCookieJar()
         
-    def requestsGet(self, url:str, params=None, allow_redirects=True) -> requests.Response:
+    def requestsGet(self, url: str, params=None, allow_redirects=True) -> requests.Response:
         res = requests.get(
             url,
-            params=params, 
-            headers=self.headers, 
-            cookies=self.cookies, 
+            params=params,
+            headers=self.headers,
+            cookies=self.cookies,
             allow_redirects=allow_redirects,
             )
         self.refreshCookies(res.cookies)
         return res
     
-    def requestsPost(self, url:str, headers=None, params=None, data=None, stream=False, allow_redirects=True) -> requests.Response:
+    def requestsPost(self, url: str, headers=None, params=None, data=None, stream=False, allow_redirects=True) -> requests.Response:
         res = requests.post(
             url,
-            stream=stream, 
-            params=params, 
-            data=data, 
-            headers=self.headers if headers == None else headers, 
-            cookies=self.cookies, 
+            stream=stream,
+            params=params,
+            data=data,
+            headers=self.headers if headers == None else headers,
+            cookies=self.cookies,
             allow_redirects=allow_redirects
             )
         self.refreshCookies(res.cookies)
         return res
-                
+        
     def refreshCookies(self, cookies:requests.sessions.RequestsCookieJar):
         dic = cookies.get_dict()
         for i in dic:
@@ -122,22 +124,51 @@ class Login:
             return self.cookies
         else:
             raise Exception(f"Grant auth fatal, please check your email or password\ncookies gained: \n{self.cookies}")
-    
-    def saveCookies(self) -> str:
-        with open(self.COOKIE_PATH, "w", encoding="utf-8")  as f:
-            f.write(json.dumps(self.cookies.get_dict(), ensure_ascii=False))
-        return self.COOKIE_PATH
 
-    def loadCookies(self) -> requests.sessions.RequestsCookieJar:
-        if os.path.exists(self.COOKIE_PATH):
-            with open(self.COOKIE_PATH, "r", encoding="utf-8") as f:
-                try:
-                    js:dict = json.loads(f.read())
-                    for i in js.keys():
-                        self.cookies.set(i, js[i])
-                        logging.debug(f"{i} loaded")
-                    return self.cookies
-                except:
-                    raise Exception("Load cookies from json file fatal. Error while parsing json file")
-        else:
-            raise Exception(f"{self.COOKIE_PATH} doesn't seem to exist")
+    def saveCookiesToDir(self, cookie_dir_path: str = None) -> str:
+        """
+        cookies will be saved into: cookie_dir_path/<email>.json
+        """
+        cookie_dir_path = self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
+        if not cookie_dir_path.endswith("/"):
+            cookie_dir_path += "/"
+        cookie_path = cookie_dir_path + f"{self.email}.json"
+        if not os.path.exists(cookie_dir_path):
+            logging.info("Cookie directory not exist, creating...")
+            os.makedirs(cookie_dir_path)
+        logging.info(f"Cookie store path: {cookie_path}")
+    
+        with open(cookie_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(self.cookies.get_dict()))
+        return cookie_path
+
+    def _getCookiePath(self, cookie_dir_path) -> str:
+        if not cookie_dir_path.endswith("/"):
+            cookie_dir_path += "/"
+        if not os.path.exists(cookie_dir_path):
+            return ""
+        files = os.listdir(cookie_dir_path)
+        for i in files:
+            if i == f"{self.email}.json":
+                return cookie_dir_path + i
+        return ""
+
+    def loadCookiesFromDir(self, cookie_dir_path: str = None) -> requests.sessions.RequestsCookieJar:
+        """
+        cookie files needs to be named as: cookie_dir_path/<email>.json
+        """
+        cookie_dir_path = self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
+        cookie_path = self._getCookiePath(cookie_dir_path)
+        if not cookie_path:
+            raise Exception(f"Cookie not found. please check the path given: {cookie_dir_path}.\n" +
+                            f"Cookie file must be named like this: 'your_email'+'.json': '{self.email}.json'")
+    
+        with open(cookie_path, "r", encoding="utf-8") as f:
+            try:
+                js = json.loads(f.read())
+                for i in js.keys():
+                    self.cookies.set(i, js[i])
+                    logging.info(f"{i} loaded")
+                return self.cookies
+            except:
+                raise Exception("load cookies from files fatal. Please check the format")
