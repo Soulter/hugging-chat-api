@@ -31,11 +31,11 @@ from hugchat.login import Login
 # login
 sign = Login(email, passwd)
 cookies = sign.login()
-sign.saveCookies()
+sign.saveCookiesToDir(cookie_path_dir)
 
 # load cookies from usercookies/<email>.json
 sign = login(email, None)
-cookies = sign.loadCookies() # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
+cookies = sign.loadCookiesFromDir(cookie_path_dir) # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
 ```
 
 ## Usage
