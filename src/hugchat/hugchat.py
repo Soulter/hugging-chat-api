@@ -23,7 +23,7 @@ class ChatBot:
         cookie_path: str = ""
     ) -> None:
         if cookies is None and cookie_path == "":
-            raise ChatBotInitError("Authentication is required now, but no cookies provided")
+            raise ChatBotInitError("Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api")
         elif cookies is not None and cookie_path != "":
             raise ChatBotInitError("Both cookies and cookie_path provided")
         
@@ -196,7 +196,53 @@ class ChatBot:
 
         if r.status_code != 200:
             raise DeleteConversationError(f"Failed to delete conversation with status code: {r.status_code}")
+    
+    
+    # def get_available_llm_models() {
+    #     '''
+    #     Get all available models that exists in huggingface.co/chat.
+    #     Returns a hard-code array. The array is up to date.
+    #     '''
+    #     return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf']
+    # }
+
+    def switch_llm(self, to: int) -> bool:
+        '''
+        Attempts to change current conversation's Large Language Model.
+        Requires an index to indicate the model you want to switch.
+        For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf` :)
         
+        * llm 1 is the latest LLM.
+        * REMEMBER: For flexibility, the effect of switch just limited to *current conversation*. You can manually switch llm when you change a conversasion.
+        '''
+
+        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf']
+
+        mdl = ""
+        if to == 0:
+            mdl = "OpenAssistant/oasst-sft-6-llama-30b-xor",
+        elif to == 1:
+            mdl = "meta-llama/Llama-2-70b-chat-hf"
+        else:
+            raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf` :)")
+
+        response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
+            "shareConversationsWithModelAuthors": "true",
+            "ethicsModalAcceptedAt": "",
+            "searchEnabled": "true",
+            "activeModel": mdl,
+        })
+
+        check = self.check_operation()
+        if check:
+            return True
+        else:
+            print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
+            return False
+
+    def check_operation(self) -> bool:
+        r = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1", headers=self.get_headers(ref=True), cookies=self.get_cookies())
+        return r.status_code == 200
 
     def chat(
         self,
