@@ -10,6 +10,9 @@ HuggingChat Python API
 
 Leave a star :)
 
+Recently new updates:
+- Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
+
 > When you use this project, it means that you have agreed to the following two requirements of the HuggingChat:
 >
 > 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
