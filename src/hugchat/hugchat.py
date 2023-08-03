@@ -198,13 +198,24 @@ class ChatBot:
             raise DeleteConversationError(f"Failed to delete conversation with status code: {r.status_code}")
     
     
-    # def get_available_llm_models() {
-    #     '''
-    #     Get all available models that exists in huggingface.co/chat.
-    #     Returns a hard-code array. The array is up to date.
-    #     '''
-    #     return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf']
-    # }
+    def get_available_llm_models(self) -> list:
+        '''
+        Get all available models that exists in huggingface.co/chat.
+        Returns a hard-code array. The array is up to date.
+        '''
+        return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf']
+
+    def set_share_conversations(self, val: bool = True):
+        setting = {
+            "ethicsModalAcceptedAt": "",
+            "searchEnabled": "true",
+            "activeModel": 'meta-llama/Llama-2-70b-chat-hf',
+        }
+        if val:
+            setting['shareConversationsWithModelAuthors'] = 'on'
+
+        response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data=setting)
+
 
     def switch_llm(self, to: int) -> bool:
         '''
@@ -227,7 +238,7 @@ class ChatBot:
             raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf` :)")
 
         response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
-            "shareConversationsWithModelAuthors": "true",
+            "shareConversationsWithModelAuthors": "on",
             "ethicsModalAcceptedAt": "",
             "searchEnabled": "true",
             "activeModel": mdl,
@@ -244,9 +255,16 @@ class ChatBot:
         r = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1", headers=self.get_headers(ref=True), cookies=self.get_cookies())
         return r.status_code == 200
 
+    # def _web_search(self, prompt: str) -> bool:
+    #     print("searching on web ...")
+    #     r = self.session.get(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/web-search?prompt={prompt}", headers=self.get_headers(ref=True), cookies=self.get_cookies(), timeout=300)
+    #     print("done")
+    #     return r.status_code == 200
+
     def chat(
         self,
         text: str,
+        # web_search: bool=False,
         temperature: float=0.9,
         top_p: float=0.95,
         repetition_penalty: float=1.2,
@@ -263,11 +281,23 @@ class ChatBot:
     ):
         '''
         Send a message to the current conversation. Return the response text.
+        You can customize these optional parameters.
+        You can turn on the web search by set the parameter `web_search` to True
         '''
+        
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
         if self.current_conversation == "":
             self.current_conversation = self.new_conversation()
+        if text == "":
+            raise Exception("the prompt can not be empty.")
+
+        # Invoke Web Search API
+        # if web_search:
+        #     res = self._web_search(text)
+        #     if not res:
+        #         print("Web search may failed.")
+
         req_json = {
             "inputs": text,
             "parameters": {
@@ -288,6 +318,8 @@ class ChatBot:
                     "id": str(uuid.uuid4()),
             },
         }
+        # if web_search:
+        #     req_json["options"]["web_search_id"] = str(uuid.uuid4()).replace("-","")[0:24]
         # print(req_json)
         # print(self.session.cookies.get_dict())
         # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")

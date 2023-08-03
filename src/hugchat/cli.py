@@ -27,7 +27,7 @@ def cli():
     print("-------HuggingChat-------")
     print("Official Site: https://huggingface.co/chat")
     print(
-        "1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\n2. Your conversations will be shared with model authors.\nContinuing to use means that you accept the above points")
+        "1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\nContinuing to use means that you accept the above point(s)")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-u",
@@ -106,6 +106,31 @@ def cli():
         
         elif question in ["/exit", "/quit", "/close"]:
             running = False
+        
+        elif question.startswith("/llm"):
+            l = question.split(" ")
+            if len(l) < 2:
+                res = ""
+                index = 0
+                for i in chatbot.get_available_llm_models():
+                    res += f"\n{index}. {i}"
+                    index+=1
+                
+                print(f"Available llm:{res}\nUse /llm [index] to change.")
+            elif len(l) == 2:
+                try:
+                    index = int(l[1])
+                    if index > len(chatbot.get_available_llm_models()):
+                        print("# wrong index")
+                    else:
+                        chatbot.switch_llm(index)
+                        print(f"Succeed to switch llm to {chatbot.get_available_llm_models()[index]}")
+                except BaseException:
+                    print("# Invalid parameter")
+        elif question.startswith("/sharewithauthor on"):
+            chatbot.set_share_conversations(True)
+        elif question.startswith("/sharewithauthor off"):
+            chatbot.set_share_conversations(False)
         
         elif question.startswith("/"):
             print("# Invalid command")
