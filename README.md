@@ -105,6 +105,8 @@ Commands in cli mode:
 - `/ids` : Shows a list of all ID numbers and ID strings in current session.
 - `/switch <id>` : Switches to the ID number passed.
 - `/exit` : Closes CLI environment.
+- `/llm`: get available models you can switch to
+- `/llm [index]` switch model to given models
 
 ## Disclaimers
 
