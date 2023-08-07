@@ -57,7 +57,7 @@ from hugchat.login import Login
 sign = Login(email, passwd)
 cookies = sign.login()
 
-# Save cookies to usercookies/<email>.json
+# Save cookies to the local directory
 cookie_path_dir = "./cookies_snapshot"
 sign.saveCookiesToDir(cookie_path_dir)
 
