@@ -58,7 +58,8 @@ sign = Login(email, passwd)
 cookies = sign.login()
 
 # Save cookies to usercookies/<email>.json
-sign.saveCookies()
+cookie_path_dir = "./cookies_snapshot"
+sign.saveCookiesToDir()
 
 # Create a ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
