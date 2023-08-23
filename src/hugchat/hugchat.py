@@ -44,7 +44,8 @@ class ChatBot:
         self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
         self.conversation_id_list = []
-        self.active_model = "OpenAssistant/oasst-sft-6-llama-30b-xor"
+        self.__not_summarize_cids = []
+        self.active_model = "meta-llama/Llama-2-70b-chat-hf"
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
         self.current_conversation = self.new_conversation()
 
@@ -56,21 +57,26 @@ class ChatBot:
         session.get(self.hf_base_url + "/chat")
         return session
     
-    def get_headers(self, ref=True) -> dict:
+    def get_headers(self, ref=True, ref_cid = None) -> dict:
         _h = {
             "Accept": "*/*",
             "Connection": "keep-alive",
             "Host": "huggingface.co",
             "Origin": "https://huggingface.co",
-            "sec-gpc": "1",
             "Sec-Fetch-Site": "same-origin",
+            "Content-Type": "application/json",
+            "Sec-Ch-Ua-Platform": "Windows",
+            "Sec-Ch-Ua": "Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Microsoft Edge\";v=\"116",
+            "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Dest": "empty",
             "Accept-Encoding": "gzip, deflate, br",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
         }
         if ref:
-            _h["Referer"] = f"https://huggingface.co/chat/conversation/{self.current_conversation}"
+            if ref_cid is None:
+                ref_cid = self.current_conversation
+            _h["Referer"] = f"https://huggingface.co/chat/conversation/{ref_cid}"
         return _h
     
     def get_cookies(self) -> dict:
@@ -115,14 +121,21 @@ class ChatBot:
         #     self.accept_ethics_modal()
 
         # Create new conversation and get a conversation id.
+
+        _header = self.get_headers(ref = False)
+        _header['Referer'] = "https://huggingface.co/chat"
+
         resp = ""
         while True:
             try:
-                resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": self.active_model}, headers=self.json_header)
+                resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": self.active_model}, headers=_header, cookies = self.get_cookies())
+                # print("new conversation")
                 # print(resp.text)
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
                 self.conversation_id_list.append(cid)
+                self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
+                self.__preserve_context(cid = cid, ending = "1_1")
                 return cid
             
             except BaseException as e:
@@ -149,14 +162,14 @@ class ChatBot:
         if conversation_id is None:
             conversation_id = self.current_conversation
         
-        headers = self.get_headers()
-
+        headers = self.get_headers(ref = True)
         r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/summarize", headers=headers, cookies=self.get_cookies())
         
         if r.status_code != 200:
             raise Exception(f"Failed to send chat message with status code: {r.status_code}")
         
         response = r.json()
+        # print(response)
         if 'title' in response:
             return response['title']
 
@@ -297,6 +310,8 @@ class ChatBot:
         #     res = self._web_search(text)
         #     if not res:
         #         print("Web search may failed.")
+        options_id = str(uuid.uuid4())
+        options_rid = str(uuid.uuid4())
 
         req_json = {
             "inputs": text,
@@ -317,13 +332,24 @@ class ChatBot:
                     "is_retry": is_retry,
                     "id": str(uuid.uuid4()),
             },
+            "stream": True,
         }
+        
         # if web_search:
         #     req_json["options"]["web_search_id"] = str(uuid.uuid4()).replace("-","")[0:24]
         # print(req_json)
         # print(self.session.cookies.get_dict())
         # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
-        headers = self.get_headers(ref=True)
+        headers = {
+            "Origin": "https://huggingface.co",
+            "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
+            "Content-Type": "application/json",
+            "Sec-ch-ua": '"Chromium";v="94", "Microsoft Edge";v="94", ";Not A Brand";v="99"',
+            "Sec-ch-ua-mobile": "?0",
+            "Sec-ch-ua-platform": '"Windows"',
+            "Accept": "*/*",
+            "Accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+        }
 
         while retry_count > 0:
             resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
@@ -338,16 +364,61 @@ class ChatBot:
                 if line:
                     res = line.decode("utf-8")
                     try:
-                        obj = json.loads(res[1:-1])
+                        # print(f"line: {res}")
+                        obj = json.loads(res[5:])
                     except:
                         if "{\"error\":\"Model is overloaded\"" in res:
                             raise ModelOverloadedError("Model is overloaded, please try again later.")
                         raise ChatError(f"Failed to parse response: {res}")
                     if "generated_text" in obj:
-                        res_text += obj["generated_text"]
+                        if obj["token"]["text"].endswith("</s>"):
+                            res_text += obj["token"]["text"][:-5]
+                        else:
+                            res_text += obj["token"]["text"]
                     elif "error" in obj:
                         raise ChatError(obj["error"])
-            return res_text
+            # try to summarize the conversation and preserve the context.
+            try:
+                if self.current_conversation in self.__not_summarize_cids:
+                    self.summarize_conversation()
+                    self.__not_summarize_cids.remove(self.current_conversation)
+                self.__preserve_context(ref_cid = self.current_conversation)
+            except:
+                pass
+
+            return res_text.strip()
+
+    def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = ""):
+        # print("preserve_context")
+        headers = {
+            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203",
+            'Accept': "*/*",
+        }
+        if ref_cid == "":
+            headers["Referer"] = "https://huggingface.co/chat"
+        else:
+            headers["Referer"] = f"https://huggingface.co/chat/conversation/{ref_cid}"
+        # print(headers)
+        cookie = {
+            'hf-chat': self.get_cookies()['hf-chat'],
+        }
+        if cid is None:
+            cid = self.current_conversation
+        url = f"https://huggingface.co/chat/conversation/{cid}/__data.json?x-sveltekit-invalidated={ending}"
+        # response = requests.get(url, cookies = cookie, headers = headers )
+        response = self.session.get(url, cookies = cookie, headers = headers, data = {})
+        # print(response.text)
+        import time
+        
+        # f = open(f"test{str(time.time())}.json", "w", encoding="utf-8")
+        # f.write(json.dumps(response.json(), indent=4, ensure_ascii=False))
+        # f.close()
+        
+        if response.status_code == 200:
+            # print("OK")
+            return {'message': "Context Successfully Preserved", "status":200}
+        else:
+            return {'message': "Internal Error", "status": 500}
 
 
 if __name__ == "__main__":
