@@ -64,7 +64,7 @@ sign.saveCookiesToDir(cookie_path_dir)
 
 # Create a ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
-print(chatbot.chat("HI"))
+print(chatbot.chat("Hi!"))
 
 # Create a new conversation
 id = chatbot.new_conversation()
@@ -72,6 +72,10 @@ chatbot.change_conversation(id)
 
 # Get conversation list
 conversation_list = chatbot.get_conversation_list()
+
+# Switch model (default: meta-llama/Llama-2-70b-chat-hf. )
+chatbot.switch_llm(0) # Switch to `OpenAssistant/oasst-sft-6-llama-30b-xor`
+chatbot.switch_llm(1) # Switch to `meta-llama/Llama-2-70b-chat-hf`
 ```
 
 The `chat()` function receives these parameters:
