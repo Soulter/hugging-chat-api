@@ -25,26 +25,9 @@ Recently new updates:
 
 <div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
 
-## Authentication (Required Now)
-
-### Get Cookies
-
-```python
-from hugchat.login import Login
-
-# login
-sign = Login(email, passwd)
-cookies = sign.login()
-sign.saveCookiesToDir(cookie_path_dir)
-
-# load cookies from usercookies/<email>.json
-sign = login(email, None)
-cookies = sign.loadCookiesFromDir(cookie_path_dir) # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
-```
-
 ## Usage
 
-### Basic mode
+### API
 
 ```bash
 pip install hugchat
@@ -61,6 +44,10 @@ cookies = sign.login()
 # Save cookies to the local directory
 cookie_path_dir = "./cookies_snapshot"
 sign.saveCookiesToDir(cookie_path_dir)
+
+# Load cookies when you restart your program:
+# sign = login(email, None)
+# cookies = sign.loadCookiesFromDir(cookie_path_dir) # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
 
 # Create a ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
@@ -95,7 +82,7 @@ The `chat()` function receives these parameters:
 - `is_retry`: Optional[bool]. Default is False
 - `retry_count`: Optional[int]. Number of retries for requesting huggingchat. Default is 5
 
-### CLI mode
+### CLI
 
 > `version 0.0.5.2` or newer
 
