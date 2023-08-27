@@ -14,17 +14,6 @@ Recently new updates:
 - **SUPPORT MEMORIZE THE CONVERSATION CONTEXT NOW**
 - Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
 
-> When you use this project, it means that you have agreed to the following two requirements of the HuggingChat:
->
-> 1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
-> 2. Your conversations will be shared with model authors.
-
-**Server resources are precious, it is not recommended to request this API in a high frequency.**
-
-(`Hugging Face's CTO🤗` just liked the suggestion)
-
-<div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
-
 ## Usage
 
 ### API
@@ -100,6 +89,12 @@ Commands in cli mode:
 - `/exit` : Closes CLI environment.
 - `/llm`: get available models you can switch to
 - `/llm [index]` switch model to given models
+
+- AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
+- Server resources are precious, it is not recommended to request this API in a high frequency.
+(`Hugging Face's CTO🤗` just liked the suggestion)
+<div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
+
 
 ## Disclaimers
 
