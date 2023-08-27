@@ -14,13 +14,15 @@ Recently new updates:
 - **SUPPORT MEMORIZE THE CONVERSATION CONTEXT NOW**
 - Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
 
-## Usage
-
-### API
-
+## Install
 ```bash
 pip install hugchat
 ```
+or `pip3 install hugchat`
+
+## Usage
+
+### API
 
 ```py
 from hugchat import hugchat
