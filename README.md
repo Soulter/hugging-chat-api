@@ -11,7 +11,7 @@ HuggingChat Python API
 Leave a star :)
 
 Recently new updates:
-- **SUPPORT MEMORIZE THE CONVERSATION CONTEXT NOW**
+- **MEMORIZE CONVERSATION CONTEXT SUPPORT**
 - Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
 
 ## Install
