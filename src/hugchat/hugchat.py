@@ -216,7 +216,7 @@ class ChatBot:
         Get all available models that exists in huggingface.co/chat.
         Returns a hard-code array. The array is up to date.
         '''
-        return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf']
+        return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf']
 
     def set_share_conversations(self, val: bool = True):
         setting = {
@@ -234,21 +234,23 @@ class ChatBot:
         '''
         Attempts to change current conversation's Large Language Model.
         Requires an index to indicate the model you want to switch.
-        For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf` :)
+        For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf' :)
         
         * llm 1 is the latest LLM.
         * REMEMBER: For flexibility, the effect of switch just limited to *current conversation*. You can manually switch llm when you change a conversasion.
         '''
 
-        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf']
+        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf']
 
         mdl = ""
         if to == 0:
             mdl = "OpenAssistant/oasst-sft-6-llama-30b-xor",
         elif to == 1:
             mdl = "meta-llama/Llama-2-70b-chat-hf"
+        elif to == 2:
+            mdl = 'codellama/CodeLlama-34b-Instruct-hf'
         else:
-            raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf` :)")
+            raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf':)")
 
         response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
             "shareConversationsWithModelAuthors": "on",
