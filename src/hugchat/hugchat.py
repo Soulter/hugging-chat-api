@@ -45,7 +45,7 @@ class ChatBot:
         self.session = self.get_hc_session()
         self.conversation_id_list = []
         self.__not_summarize_cids = []
-        self.active_model = "meta-llama/Llama-2-70b-chat-hf"
+        self.active_model = "tiiuae/falcon-180B-chat"#"meta-llama/Llama-2-70b-chat-hf"
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
         self.current_conversation = self.new_conversation()
 
@@ -216,13 +216,13 @@ class ChatBot:
         Get all available models that exists in huggingface.co/chat.
         Returns a hard-code array. The array is up to date.
         '''
-        return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf']
+        return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf', 'tiiuae/falcon-180B-chat']
 
     def set_share_conversations(self, val: bool = True):
         setting = {
             "ethicsModalAcceptedAt": "",
             "searchEnabled": "true",
-            "activeModel": 'meta-llama/Llama-2-70b-chat-hf',
+            "activeModel": 'tiiuae/falcon-180B-chat',#'meta-llama/Llama-2-70b-chat-hf',
         }
         if val:
             setting['shareConversationsWithModelAuthors'] = 'on'
@@ -234,13 +234,13 @@ class ChatBot:
         '''
         Attempts to change current conversation's Large Language Model.
         Requires an index to indicate the model you want to switch.
-        For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf' :)
+        For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf', 3 is 'tiiuae/falcon-180B-chat' :)
         
         * llm 1 is the latest LLM.
         * REMEMBER: For flexibility, the effect of switch just limited to *current conversation*. You can manually switch llm when you change a conversasion.
         '''
 
-        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf']
+        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf', 'tiiuae/falcon-180B-chat']
 
         mdl = ""
         if to == 0:
@@ -249,8 +249,10 @@ class ChatBot:
             mdl = "meta-llama/Llama-2-70b-chat-hf"
         elif to == 2:
             mdl = 'codellama/CodeLlama-34b-Instruct-hf'
+        elif to == 3:
+            mdl = 'tiiuae/falcon-180B-chat'
         else:
-            raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf':)")
+            raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf', 3 is 'tiiuae/falcon-180B-chat':)")
 
         response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
             "shareConversationsWithModelAuthors": "on",
@@ -261,6 +263,7 @@ class ChatBot:
 
         check = self.check_operation()
         if check:
+            self.active_model = mdl
             return True
         else:
             print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
