@@ -244,7 +244,7 @@ class ChatBot:
 
         mdl = ""
         if to == 0:
-            mdl = "OpenAssistant/oasst-sft-6-llama-30b-xor",
+            mdl = "OpenAssistant/oasst-sft-6-llama-30b-xor"
         elif to == 1:
             mdl = "meta-llama/Llama-2-70b-chat-hf"
         elif to == 2:
