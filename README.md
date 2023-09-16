@@ -85,10 +85,12 @@ Commands in cli mode:
 
 - `/new` : Create and switch to a new conversation.
 - `/ids` : Shows a list of all ID numbers and ID strings in current session.
-- `/switch <id>` : Switches to the ID number passed.
-- `/exit` : Closes CLI environment.
+- `/switch <id>` : Switches to the ID number or ID string passed.
+- `/del` : Deletes the ID number or ID string passed. Will not delete active session.
+- `/clear` : Clear the terminal.
 - `/llm`: get available models you can switch to
 - `/llm [index]` switch model to given models
+- `/exit` : Closes CLI environment.
 
 - AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
 - Server resources are precious, it is not recommended to request this API in a high frequency.
