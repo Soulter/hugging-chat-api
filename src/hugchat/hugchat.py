@@ -24,8 +24,8 @@ class ChatBot:
     ) -> None:
         """
         default_llm: 
-        0: `OpenAssistant/oasst-sft-6-llama-30b-xor`
-        1: `meta-llama/Llama-2-70b-chat-hf`
+        0: `meta-llama/Llama-2-70b-chat-hf`
+        1: `OpenAssistant/oasst-sft-6-llama-30b-xor`
         2: `codellama/CodeLlama-34b-Instruct-hf`
         3: `tiiuae/falcon-180B-chat`
         """
@@ -53,13 +53,13 @@ class ChatBot:
         self.conversation_id_list = []
         self.__not_summarize_cids = []
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
-        self.llms = [
+        self.llms = [ # The array is up to date as of 16/09/2023.
                 'meta-llama/Llama-2-70b-chat-hf', 
                 'OpenAssistant/oasst-sft-6-llama-30b-xor',
                 'codellama/CodeLlama-34b-Instruct-hf', 
                 'tiiuae/falcon-180B-chat'
                 ]
-        self.switch_llm(default_llm)
+        self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
 
 
@@ -105,7 +105,10 @@ class ChatBot:
     # Returns a pointer to this objects list that contains id of conversations.
     def get_conversation_list(self) -> list:
         return list(self.conversation_id_list)
-
+    
+    def get_active_llm_index(self) -> int:
+        return self.llms.index(self.active_model)
+    
     def accept_ethics_modal(self):
         '''
         [Deprecated Method]
@@ -229,7 +232,7 @@ class ChatBot:
     def get_available_llm_models(self) -> list:
         '''
         Get all available models that exists in huggingface.co/chat.
-        Returns a hard-code array. The array is up to date as of 16/09/2023.
+        Returns a hard-code array.
         '''
         return self.llms
 
@@ -245,14 +248,11 @@ class ChatBot:
         self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data=setting)
 
 
-    def switch_llm(self, to: Union[int, str]) -> bool:
+    def switch_llm(self, index: int) -> bool:
         '''
         Attempts to change current conversation's Large Language Model.
         Requires an index to indicate the model you want to switch.
-        0: `OpenAssistant/oasst-sft-6-llama-30b-xor`
-        1: `meta-llama/Llama-2-70b-chat-hf`
-        2: `codellama/CodeLlama-34b-Instruct-hf`
-        3: `tiiuae/falcon-180B-chat`
+        See self.llms for avalible models.
 
         Note: 1. The effect of switch is limited to the current conversation,
         You can manually switch the llm when you start a new conversation.
@@ -260,24 +260,26 @@ class ChatBot:
         2. Only works *after creating a new conversation.*
         :)
         '''
+        # TODO: I will work on making it have a model for each conversation that is changable. - @Zekaroni
+        
+        if index < len(self.llms) and index >= 0:
+            self.active_model = self.llms[index]
+            return True
+        else:
+            raise IndexError("Out of range of llm index")
 
-        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 
-                'meta-llama/Llama-2-70b-chat-hf', 
-                'codellama/CodeLlama-34b-Instruct-hf', 
-                'tiiuae/falcon-180B-chat']
-        flag = True
-        if isinstance(to, str):
-            if to not in llms:
-                flag = False
-            else:
-                to = llms.index(to)
-        if to < 0 or to > len(llms):
-            flag = False
-        if not flag:
-            raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf', 3 is 'tiiuae/falcon-180B-chat':)")
-        mdl = llms[to]
-        self.active_model = mdl
-        return True
+        # flag = True
+        # if isinstance(to, str):
+        #     if to not in self.llms:
+        #         flag = False
+        #     else:
+        #         to = self.llms.index(to)
+        # if to < 0 or to > len(self.llms):
+        #     flag = False
+        # if not flag:
+        #     raise BaseException("Can't switch llm, unexpected index. For now, 0 is `meta-llama/Llama-2-70b-chat-hf`, 1 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 2 is 'codellama/CodeLlama-34b-Instruct-hf', 3 is 'tiiuae/falcon-180B-chat':)")
+        # self.active_model = to
+        # return True
 
         # response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
         #     "shareConversationsWithModelAuthors": "on",
