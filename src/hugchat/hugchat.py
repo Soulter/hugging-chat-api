@@ -20,7 +20,7 @@ class ChatBot:
         self,
         cookies: dict = None,
         cookie_path: str = "",
-        default_llm: Union[int, str] = 1,
+        default_llm: Union[int, str] = 0,
     ) -> None:
         """
         default_llm: 
@@ -53,6 +53,12 @@ class ChatBot:
         self.conversation_id_list = []
         self.__not_summarize_cids = []
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
+        self.llms = [
+                'meta-llama/Llama-2-70b-chat-hf', 
+                'OpenAssistant/oasst-sft-6-llama-30b-xor',
+                'codellama/CodeLlama-34b-Instruct-hf', 
+                'tiiuae/falcon-180B-chat'
+                ]
         self.switch_llm(default_llm)
         self.current_conversation = self.new_conversation()
 
@@ -225,10 +231,7 @@ class ChatBot:
         Get all available models that exists in huggingface.co/chat.
         Returns a hard-code array. The array is up to date as of 16/09/2023.
         '''
-        return ['OpenAssistant/oasst-sft-6-llama-30b-xor',
-                'meta-llama/Llama-2-70b-chat-hf', 
-                'codellama/CodeLlama-34b-Instruct-hf', 
-                'tiiuae/falcon-180B-chat']
+        return self.llms
 
     def set_share_conversations(self, val: bool = True):
         setting = {
