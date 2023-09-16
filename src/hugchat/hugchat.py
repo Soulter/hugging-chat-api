@@ -4,8 +4,7 @@ import json
 import os
 import uuid
 import logging
-import re
-import getpass
+from typing import Union
 
 from .exceptions import *
 
@@ -20,8 +19,16 @@ class ChatBot:
     def __init__(
         self,
         cookies: dict = None,
-        cookie_path: str = ""
+        cookie_path: str = "",
+        default_llm: Union[int, str] = 1,
     ) -> None:
+        """
+        default_llm: 
+        0: `OpenAssistant/oasst-sft-6-llama-30b-xor`
+        1: `meta-llama/Llama-2-70b-chat-hf`
+        2: `codellama/CodeLlama-34b-Instruct-hf`
+        3: `tiiuae/falcon-180B-chat`
+        """
         if cookies is None and cookie_path == "":
             raise ChatBotInitError("Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api")
         elif cookies is not None and cookie_path != "":
@@ -45,8 +52,8 @@ class ChatBot:
         self.session = self.get_hc_session()
         self.conversation_id_list = []
         self.__not_summarize_cids = []
-        self.active_model = "tiiuae/falcon-180B-chat"#"meta-llama/Llama-2-70b-chat-hf"
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
+        self.switch_llm(default_llm)
         self.current_conversation = self.new_conversation()
 
 
@@ -169,7 +176,6 @@ class ChatBot:
             raise Exception(f"Failed to send chat message with status code: {r.status_code}")
         
         response = r.json()
-        # print(response)
         if 'title' in response:
             return response['title']
 
@@ -216,7 +222,10 @@ class ChatBot:
         Get all available models that exists in huggingface.co/chat.
         Returns a hard-code array. The array is up to date.
         '''
-        return ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf', 'tiiuae/falcon-180B-chat']
+        return ['OpenAssistant/oasst-sft-6-llama-30b-xor',
+                'meta-llama/Llama-2-70b-chat-hf', 
+                'codellama/CodeLlama-34b-Instruct-hf', 
+                'tiiuae/falcon-180B-chat']
 
     def set_share_conversations(self, val: bool = True):
         setting = {
@@ -227,47 +236,56 @@ class ChatBot:
         if val:
             setting['shareConversationsWithModelAuthors'] = 'on'
 
-        response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data=setting)
+        self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data=setting)
 
 
-    def switch_llm(self, to: int) -> bool:
+    def switch_llm(self, to: Union[int, str]) -> bool:
         '''
         Attempts to change current conversation's Large Language Model.
         Requires an index to indicate the model you want to switch.
-        For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf', 3 is 'tiiuae/falcon-180B-chat' :)
-        
-        * llm 1 is the latest LLM.
-        * REMEMBER: For flexibility, the effect of switch just limited to *current conversation*. You can manually switch llm when you change a conversasion.
+        0: `OpenAssistant/oasst-sft-6-llama-30b-xor`
+        1: `meta-llama/Llama-2-70b-chat-hf`
+        2: `codellama/CodeLlama-34b-Instruct-hf`
+        3: `tiiuae/falcon-180B-chat`
+
+        Note: 1. The effect of switch is limited to the current conversation,
+        You can manually switch the llm when you start a new conversation.
+
+        2. Only works *after creating a new conversation.*
+        :)
         '''
 
-        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 'meta-llama/Llama-2-70b-chat-hf', 'codellama/CodeLlama-34b-Instruct-hf', 'tiiuae/falcon-180B-chat']
-
-        mdl = ""
-        if to == 0:
-            mdl = "OpenAssistant/oasst-sft-6-llama-30b-xor"
-        elif to == 1:
-            mdl = "meta-llama/Llama-2-70b-chat-hf"
-        elif to == 2:
-            mdl = 'codellama/CodeLlama-34b-Instruct-hf'
-        elif to == 3:
-            mdl = 'tiiuae/falcon-180B-chat'
-        else:
+        llms = ['OpenAssistant/oasst-sft-6-llama-30b-xor', 
+                'meta-llama/Llama-2-70b-chat-hf', 
+                'codellama/CodeLlama-34b-Instruct-hf', 
+                'tiiuae/falcon-180B-chat']
+        flag = True
+        if isinstance(to, str):
+            if to not in llms:
+                flag = False
+            else:
+                to = llms.index(to)
+        if to < 0 or to > len(llms):
+            flag = False
+        if not flag:
             raise BaseException("Can't switch llm, unexpected index. For now, 0 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 1 is `meta-llama/Llama-2-70b-chat-hf`, 2 is 'codellama/CodeLlama-34b-Instruct-hf', 3 is 'tiiuae/falcon-180B-chat':)")
+        mdl = llms[to]
+        self.active_model = mdl
+        return True
 
-        response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
-            "shareConversationsWithModelAuthors": "on",
-            "ethicsModalAcceptedAt": "",
-            "searchEnabled": "true",
-            "activeModel": mdl,
-        })
-
-        check = self.check_operation()
-        if check:
-            self.active_model = mdl
-            return True
-        else:
-            print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
-            return False
+        # response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
+        #     "shareConversationsWithModelAuthors": "on",
+        #     "ethicsModalAcceptedAt": "",
+        #     "searchEnabled": "true",
+        #     "activeModel": mdl,
+        # })
+        # check = self.check_operation()
+        # if check:
+        #     self.active_model = mdl
+        #     return True
+        # else:
+        #     print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
+        #     return False
 
     def check_operation(self) -> bool:
         r = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1", headers=self.get_headers(ref=True), cookies=self.get_cookies())
@@ -315,8 +333,6 @@ class ChatBot:
         #     res = self._web_search(text)
         #     if not res:
         #         print("Web search may failed.")
-        options_id = str(uuid.uuid4())
-        options_rid = str(uuid.uuid4())
 
         req_json = {
             "inputs": text,
@@ -372,8 +388,8 @@ class ChatBot:
                         # print(f"line: {res}")
                         obj = json.loads(res[5:])
                     except:
-                        if "{\"error\":\"Model is overloaded\"" in res:
-                            raise ModelOverloadedError("Model is overloaded, please try again later.")
+                        if "Model is overloaded" in res:
+                            raise ModelOverloadedError("Model is overloaded, please try again later or switch to another model.")
                         raise ChatError(f"Failed to parse response: {res}")
                     if "generated_text" in obj:
                         if obj["token"]["text"].endswith("</s>"):
@@ -410,17 +426,8 @@ class ChatBot:
         if cid is None:
             cid = self.current_conversation
         url = f"https://huggingface.co/chat/conversation/{cid}/__data.json?x-sveltekit-invalidated={ending}"
-        # response = requests.get(url, cookies = cookie, headers = headers )
         response = self.session.get(url, cookies = cookie, headers = headers, data = {})
-        # print(response.text)
-        import time
-        
-        # f = open(f"test{str(time.time())}.json", "w", encoding="utf-8")
-        # f.write(json.dumps(response.json(), indent=4, ensure_ascii=False))
-        # f.close()
-        
         if response.status_code == 200:
-            # print("OK")
             return {'message': "Context Successfully Preserved", "status":200}
         else:
             return {'message': "Internal Error", "status": 500}
