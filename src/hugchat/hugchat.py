@@ -223,7 +223,7 @@ class ChatBot:
     def get_available_llm_models(self) -> list:
         '''
         Get all available models that exists in huggingface.co/chat.
-        Returns a hard-code array. The array is up to date.
+        Returns a hard-code array. The array is up to date as of 16/09/2023.
         '''
         return ['OpenAssistant/oasst-sft-6-llama-30b-xor',
                 'meta-llama/Llama-2-70b-chat-hf', 
