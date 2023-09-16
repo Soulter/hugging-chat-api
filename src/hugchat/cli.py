@@ -19,6 +19,7 @@ CHECK_BEFORE_PASSWORD = True
 
 
 # COOKIE_PATH_DIR = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
+
 def cli():
     global EMAIL
     global PASSWD
@@ -174,13 +175,17 @@ def cli():
                 except BaseException:
                     print("# Invalid parameter")
 
-        elif question.startswith("/sharewithauthor on"):
-            chatbot.set_share_conversations(True)
+        elif question.startswith("/sharewithauthor"):
+            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+            if command:
+                if command in ["on","off"]:
+                    chatbot.set_share_conversations(True if command == "on" else False)
+                else:
+                    print('# Invalid argument. Expected "on" or "off"')
+            else:
+                print("# Argument needed. (on|off)")
 
-        elif question.startswith("/sharewithauthor off"):
-            chatbot.set_share_conversations(False)
-
-        elif question.endswith("/clear"):
+        elif question == "/clear":
             os.system('cls' if os.name == 'nt' else 'clear')
 
         elif question.startswith("/help"):
@@ -202,9 +207,6 @@ def cli():
 
         elif question.startswith("/"):
             print("# Invalid command")
-        
-        elif question == "":
-            pass
         
         else:
             res = chatbot.chat(question)
