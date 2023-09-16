@@ -183,6 +183,23 @@ def cli():
         elif question.endswith("/clear"):
             os.system('cls' if os.name == 'nt' else 'clear')
 
+        elif question.startswith("/help"):
+            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+            if command:
+                # TODO: Add specific examples for each command - @Zekaroni
+                pass
+            else:
+                print(
+                    "/new : Create and switch to a new conversation.\n"
+                    "/ids : Shows a list of all ID numbers and ID strings in current session.\n"
+                    "/switch <id> : Switches to the ID number or ID string passed.\n"
+                    "/del <id> : Deletes the ID number or ID string passed. Will not delete active session.\n"
+                    "/clear : Clear the terminal.\n"
+                    "/llm : Get available models you can switch to.\n"
+                    "/llm <index> : Switches model to given model index based on /llm.\n"
+                    "/exit : Closes CLI environment.\n"
+                )
+
         elif question.startswith("/"):
             print("# Invalid command")
         
