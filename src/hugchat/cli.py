@@ -148,32 +148,33 @@ def cli():
 
         elif question == "/ids":
             id_list = list(chatbot.get_conversation_list())
-            [print(f"{id_list.index(i) + 1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in
+            [print(f"# {id_list.index(i) + 1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in
              id_list]
         
         elif question in ["/exit", "/quit", "/close"]:
             running = False
         
         elif question.startswith("/llm"):
-            l = question.split(" ")
-            if len(l) < 2:
-                res = ""
-                index = 0
-                for i in chatbot.get_available_llm_models():
-                    res += f"\n{index}. {i}"
-                    index+=1
-                
-                print(f"Available llm:{res}\nUse /llm [index] to change.")
-            elif len(l) == 2:
+            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+            llms = chatbot.get_available_llm_models()
+            if command:
                 try:
-                    index = int(l[1])
-                    if index > len(chatbot.get_available_llm_models()):
-                        print("# wrong index")
+                    index = int(command) - 1
+                    if index >= 0 and index < len(llms):
+                        if chatbot.get_active_llm_index() != index:
+                            chatbot.switch_llm(index)
+                            print(f"# Successfully switched llm to {chatbot.get_available_llm_models()[index]}")
+                        else:
+                            print("# This is already the active model")
+
                     else:
-                        chatbot.switch_llm(index)
-                        print(f"Succeed to switch llm to {chatbot.get_available_llm_models()[index]}")
-                except BaseException:
+                        print("# Invaild index. Run /llm so see all models.")
+                except TypeError:
                     print("# Invalid parameter")
+            else:
+                print("# Available llm:")
+                [print(f"# {i+1} : {'<active> ' if i == chatbot.get_active_llm_index() else ''}{llms[i]}") for i in range(len(llms))]
+                print("# Use /llm <index> to change model.")
 
         elif question.startswith("/sharewithauthor"):
             command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
