@@ -169,8 +169,8 @@ def cli():
 
                     else:
                         print("# Invaild index. Run /llm so see all models.")
-                except TypeError:
-                    print("# Invalid parameter")
+                except ValueError:
+                    print("# Invalid parameter. Enter a valid index number.")
             else:
                 print("# Available llm:")
                 [print(f"# {i+1} : {'<active> ' if i == chatbot.get_active_llm_index() else ''}{llms[i]}") for i in range(len(llms))]
