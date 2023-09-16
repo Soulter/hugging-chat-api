@@ -215,6 +215,9 @@ class ChatBot:
 
         if r.status_code != 200:
             raise DeleteConversationError(f"Failed to delete conversation with status code: {r.status_code}")
+        else:
+            self.conversation_id_list.pop(self.conversation_id_list.index(conversation_id))
+            
     
     
     def get_available_llm_models(self) -> list:
