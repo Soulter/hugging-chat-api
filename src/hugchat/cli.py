@@ -19,7 +19,6 @@ CHECK_BEFORE_PASSWORD = True
 
 
 # COOKIE_PATH_DIR = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
-
 def cli():
     global EMAIL
     global PASSWD
@@ -89,16 +88,63 @@ def cli():
         elif question.startswith("/switch"):
             try:
                 conversations = chatbot.get_conversation_list()
-                conversation_id = str(question.split(" ")[1] if len(question.split(" ")) > 1 else "")
-                if conversation_id not in conversations:
+                conversation_id = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+                try:
+                    conversation_id = int(conversation_id)
+                except Exception:
+                    pass
+                if type(conversation_id) == int:
+                    if conversation_id <= len(conversations) and conversation_id > 0:
+                        new_conversation_id = conversations[conversation_id-1]
+                        if chatbot.current_conversation != new_conversation_id:
+                            chatbot.change_conversation(new_conversation_id)
+                            print(f"# Conversations switched successsfully to {new_conversation_id}")
+                        else:
+                            print("# Session already active")
+                    else:
+                        raise ValueError
+                elif str(conversation_id) not in conversations:
                     print("# Please enter a valid ID number.")
-                    print(f"# Sessions include: {conversations}")
+                    print(f"# Sessions include: {', '.join(conversations)}")
                 else:
-                    chatbot.change_conversation(conversation_id)
-                    print(f"# Conversation switched successfully to {conversation_id}")
+                    if str(conversation_id) == chatbot.current_conversation:
+                        print("# Session already active")
+                    else:
+                        chatbot.change_conversation(conversation_id)
+                        print(f"# Conversation switched successfully to {conversation_id}")
             except ValueError:
-                print("# Please enter a valid ID number\n")
+                print("# Please enter a valid ID number")
         
+        elif question.startswith("/del"):
+            try:
+                conversations = chatbot.get_conversation_list()
+                conversation_id = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+                try:
+                    conversation_id = int(conversation_id)
+                except Exception:
+                    pass
+                if type(conversation_id) == int:
+                    if conversation_id <= len(conversations) and conversation_id > 0:
+                        new_conversation_id = conversations[conversation_id-1]
+                        if chatbot.current_conversation != new_conversation_id:
+                            chatbot.delete_conversation(new_conversation_id)
+                            print(f"# Conversations successfully deleted")
+                        else:
+                            print("# Cannot delete active session")
+                    else:
+                        raise ValueError
+                elif str(conversation_id) not in conversations:
+                    print("# Please enter a valid ID number.")
+                    print(f"# Sessions include: {', '.join([conversations])}")
+                else:
+                    if str(conversation_id) == chatbot.current_conversation:
+                        print("# Cannot delete active session")
+                    else:
+                        chatbot.delete_conversation(conversation_id)
+                        print(f"# Conversation successfully deleted")
+            except ValueError:
+                print("# Please enter a valid ID number")
+
         elif question == "/ids":
             id_list = list(chatbot.get_conversation_list())
             [print(f"{id_list.index(i) + 1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in
@@ -127,11 +173,16 @@ def cli():
                         print(f"Succeed to switch llm to {chatbot.get_available_llm_models()[index]}")
                 except BaseException:
                     print("# Invalid parameter")
+
         elif question.startswith("/sharewithauthor on"):
             chatbot.set_share_conversations(True)
+
         elif question.startswith("/sharewithauthor off"):
             chatbot.set_share_conversations(False)
-        
+
+        elif question.endswith("/clear"):
+            os.system('cls' if os.name == 'nt' else 'clear')
+
         elif question.startswith("/"):
             print("# Invalid command")
         
