@@ -12,6 +12,7 @@ from .login import Login
 import getpass
 import argparse
 import os
+import traceback
 
 EMAIL = os.getenv("EMAIL")
 PASSWD = os.getenv("PASSWD")
@@ -27,7 +28,7 @@ def cli():
     print("-------HuggingChat-------")
     print("Official Site: https://huggingface.co/chat")
     print(
-        "1. AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.\nContinuing to use means that you accept the above point(s)")
+        "1. AI is an area of active research with known problems such as biased generation and misinformation.\n2. Do not use this application for high-stakes decisions or advice.\nContinuing to use means that you accept the above point(s)")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-u",
@@ -77,6 +78,7 @@ def cli():
     
     chatbot = ChatBot(cookies=cookies)
     running = True
+    print("Login successfully🎉 You can input `/help` to open the command menu.")
     while running:
         question = input("> ")
         if question == "/new":
@@ -210,8 +212,12 @@ def cli():
             print("# Invalid command")
         
         else:
-            res = chatbot.chat(question)
-            print("< " + res)
+            try:
+                res = chatbot.chat(question)
+                print("< " + res)
+            except Exception as e:
+                print(traceback.format_exc())
+                print(f"[Error] {str(e)}")
 
 
 if __name__ == '__main__':
