@@ -8,15 +8,19 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 [![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
 [![Downloads](https://static.pepy.tech/badge/hugchat)](https://pypi.python.org/pypi/hugchat)
 
-Recently new updates:
-- Memorize context
-- Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
+> **Note**  
+> Recently new updates:
+> - Memorize context
+> - Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
 
 ## Installation
 ```bash
 pip install hugchat
 ```
-or `pip3 install hugchat`
+or
+```bash
+pip3 install hugchat
+```
 
 ## Usage
 
