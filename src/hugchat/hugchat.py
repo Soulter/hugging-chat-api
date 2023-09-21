@@ -388,24 +388,29 @@ class ChatBot:
                 retry_count -= 1
                 if retry_count <= 0:
                     raise ChatError(f"Failed to chat. ({resp.status_code})")
-
-            for line in resp.iter_lines():
-                if line:
+            
+            try:
+                for line in resp.iter_lines():
+                    if not line:
+                        continue
                     res = line.decode("utf-8")
-                    try:
-                        # print(f"line: {res}")
-                        obj = json.loads(res[5:])
-                    except:
-                        if "Model is overloaded" in res:
-                            raise ModelOverloadedError("Model is overloaded, please try again later or switch to another model.")
-                        raise ChatError(f"Failed to parse response: {res}")
-                    if "generated_text" in obj:
-                        if obj["token"]["text"].endswith("</s>"):
-                            res_text += obj["token"]["text"][:-5]
-                        else:
-                            res_text += obj["token"]["text"]
-                    elif "error" in obj:
+                    obj = json.loads(res)
+
+                    if "error" in obj:
                         raise ChatError(obj["error"])
+
+                    if "finalAnswer" in obj:
+                        break
+
+                    if "token" in obj:
+                        res_text += obj["token"]
+            except requests.exceptions.ChunkedEncodingError:
+                pass
+            except BaseException as e:
+                if "Model is overloaded" in str(e):
+                    raise ModelOverloadedError("Model is overloaded, please try again later or switch to another model.")
+                raise ChatError(f"Failed to parse response: {res}")
+
             # try to summarize the conversation and preserve the context.
             try:
                 if self.current_conversation in self.__not_summarize_cids:
