@@ -395,15 +395,17 @@ class ChatBot:
                         continue
                     res = line.decode("utf-8")
                     obj = json.loads(res)
+                    type = obj['type']
 
-                    if "error" in obj:
-                        raise ChatError(obj["error"])
-
-                    if "finalAnswer" in obj:
+                    if type == "status" or type == "stream":
+                        continue
+                    elif type == "finalAnswer":
+                        res_text = obj["text"]
                         break
-
-                    if "token" in obj:
-                        res_text += obj["token"]
+                    elif "error" in obj:
+                        raise ChatError(obj["error"])
+                    else:
+                        raise ChatError(obj)
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
