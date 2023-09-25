@@ -428,6 +428,15 @@ class ChatBot:
             pass
         
         yield last_obj
+        
+    def _stream_query_filter(
+        self,
+        *args,
+        **kwargs,
+    ) -> typing.Generator[dict, None, None]:
+        for resp in self._stream_query(*args, **kwargs):
+            if resp['type'] == "stream":
+                yield resp
             
     def _non_stream_query(
         self,
@@ -484,7 +493,7 @@ class ChatBot:
         retry_count: int=5,
     ) -> typing.Generator[dict, None, None] | dict:
         if stream:
-            return self._stream_query(
+            return self._stream_query_filter(
                 text,
                 temperature,
                 top_p,
