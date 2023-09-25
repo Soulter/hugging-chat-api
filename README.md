@@ -44,7 +44,14 @@ sign.saveCookiesToDir(cookie_path_dir)
 
 # Create a ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
-print(chatbot.chat("Hi!"))
+
+print(chatbot.query("Hi!")['text'])  # non stream response
+
+for resp in chatbot.query(
+    "Hello",
+    stream=True
+):
+    print(resp)  # stream response
 
 # Create a new conversation
 id = chatbot.new_conversation()
@@ -58,7 +65,7 @@ chatbot.switch_llm(0) # Switch to `OpenAssistant/oasst-sft-6-llama-30b-xor`
 chatbot.switch_llm(1) # Switch to `meta-llama/Llama-2-70b-chat-hf`
 ```
 
-The `chat()` function receives these parameters:
+The `query()` function receives these parameters:
 
 - `text`: Required[str].
 - `temperature`: Optional[float]. Default is 0.9

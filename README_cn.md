@@ -46,7 +46,14 @@ sign.saveCookiesToDir(cookie_path_dir)
 
 # 创建 ChatBot 对象
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
-print(chatbot.chat("Hi!"))
+
+print(chatbot.query("Hi!")['text'])  # 非流式响应
+
+for resp in chatbot.query(
+    "Hello",
+    stream=True
+):
+    print(resp)  # 流式响应
 
 # 创建新的对话
 id = chatbot.new_conversation()
@@ -61,7 +68,7 @@ chatbot.switch_llm(1) # 切换到 `meta-llama/Llama-2-70b-chat-hf`
 ```
 
 
-`chat()` 函数接受以下参数:
+`query()` 函数接受以下参数:
 
 - `text`: Required[str].
 - `temperature`: Optional[float]. Default is 0.9
@@ -73,10 +80,10 @@ chatbot.switch_llm(1) # 切换到 `meta-llama/Llama-2-70b-chat-hf`
 - `max_new_tokens`: Optional[int]. Default is 1024
 - `stop`: Optional[list]. Default is ["`</s>`"]
 - `return_full_text`: Optional[bool]. Default is False
-- `stream`: Optional[bool]. Default is True
+- `stream`: 是否为流式响应. Optional[bool]. Default is False
 - `use_cache`: Optional[bool]. Default is False
 - `is_retry`: Optional[bool]. Default is False
-- `retry_count`: Optional[int]. 重试次数. Default is 5
+- `retry_count`: 重试次数. Optional[int]. Default is 5
 
 ### CLI
 
