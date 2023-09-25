@@ -539,7 +539,7 @@ class ChatBot:
         max_new_tokens: int=1024,
         stop: list=["</s>"],
         return_full_text: bool=False,
-        stream: bool=True,
+        stream: bool=False,  # make no sense
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
@@ -549,102 +549,23 @@ class ChatBot:
         You can customize these optional parameters.
         You can turn on the web search by set the parameter `web_search` to True
         '''
-        
-        if retry_count <= 0:
-            raise Exception("the parameter retry_count must be greater than 0.")
-        if self.current_conversation == "":
-            self.current_conversation = self.new_conversation()
-        if text == "":
-            raise Exception("the prompt can not be empty.")
-
-        # Invoke Web Search API
-        # if web_search:
-        #     res = self._web_search(text)
-        #     if not res:
-        #         print("Web search may failed.")
-
-        req_json = {
-            "inputs": text,
-            "parameters": {
-                "temperature": temperature,
-                "top_p": top_p,
-                "repetition_penalty": repetition_penalty,
-                "top_k": top_k,
-                "truncate": truncate,
-                "watermark": watermark,
-                "max_new_tokens": max_new_tokens,
-                "stop": stop,
-                "return_full_text": return_full_text,
-                "stream": stream,
-            },
-            "options": {
-                    "use_cache": use_cache,
-                    "is_retry": is_retry,
-                    "id": str(uuid.uuid4()),
-            },
-            "stream": True,
-        }
-        
-        # if web_search:
-        #     req_json["options"]["web_search_id"] = str(uuid.uuid4()).replace("-","")[0:24]
-        # print(req_json)
-        # print(self.session.cookies.get_dict())
-        # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
-        headers = {
-            "Origin": "https://huggingface.co",
-            "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
-            "Content-Type": "application/json",
-            "Sec-ch-ua": '"Chromium";v="94", "Microsoft Edge";v="94", ";Not A Brand";v="99"',
-            "Sec-ch-ua-mobile": "?0",
-            "Sec-ch-ua-platform": '"Windows"',
-            "Accept": "*/*",
-            "Accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
-        }
-
-        while retry_count > 0:
-            resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
-            res_text = ""
-
-            if resp.status_code != 200:
-                retry_count -= 1
-                if retry_count <= 0:
-                    raise ChatError(f"Failed to chat. ({resp.status_code})")
-            
-            try:
-                for line in resp.iter_lines(decode_unicode=True):
-                    if not line:
-                        continue
-                    res = line
-                    obj = json.loads(res)
-                    type = obj['type']
-                    print(obj)
-
-                    if type == "status" or type == "stream":
-                        continue
-                    elif type == "finalAnswer":
-                        res_text = obj["text"]
-                        break
-                    elif "error" in obj:
-                        raise ChatError(obj["error"])
-                    else:
-                        raise ChatError(obj)
-            except requests.exceptions.ChunkedEncodingError:
-                pass
-            except BaseException as e:
-                if "Model is overloaded" in str(e):
-                    raise ModelOverloadedError("Model is overloaded, please try again later or switch to another model.")
-                raise ChatError(f"Failed to parse response: {res}")
-
-            # try to summarize the conversation and preserve the context.
-            try:
-                if self.current_conversation in self.__not_summarize_cids:
-                    self.summarize_conversation()
-                    self.__not_summarize_cids.remove(self.current_conversation)
-                self.__preserve_context(ref_cid = self.current_conversation)
-            except:
-                pass
-
-            return res_text.strip()
+        return self.query(
+            text,
+            # web_search,
+            temperature,
+            top_p,
+            repetition_penalty,
+            top_k,
+            truncate,
+            watermark,
+            max_new_tokens,
+            stop,
+            return_full_text,
+            False,
+            use_cache,
+            is_retry,
+            retry_count,
+        )['text']
 
     def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = ""):
         # print("preserve_context")
