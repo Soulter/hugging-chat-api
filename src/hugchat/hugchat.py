@@ -4,6 +4,8 @@ import json
 import os
 import uuid
 import logging
+import typing
+import traceback
 from typing import Union
 
 from .exceptions import *
@@ -304,8 +306,8 @@ class ChatBot:
     #     r = self.session.get(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/web-search?prompt={prompt}", headers=self.get_headers(ref=True), cookies=self.get_cookies(), timeout=300)
     #     print("done")
     #     return r.status_code == 200
-
-    def chat(
+    
+    def _stream_query(
         self,
         text: str,
         # web_search: bool=False,
@@ -318,16 +320,10 @@ class ChatBot:
         max_new_tokens: int=1024,
         stop: list=["</s>"],
         return_full_text: bool=False,
-        stream: bool=True,
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ):
-        '''
-        Send a message to the current conversation. Return the response text.
-        You can customize these optional parameters.
-        You can turn on the web search by set the parameter `web_search` to True
-        '''
+    ) -> typing.Generator[dict, None, None]:
         
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
@@ -354,7 +350,7 @@ class ChatBot:
                 "max_new_tokens": max_new_tokens,
                 "stop": stop,
                 "return_full_text": return_full_text,
-                "stream": stream,
+                "stream": True,
             },
             "options": {
                     "use_cache": use_cache,
@@ -379,10 +375,12 @@ class ChatBot:
             "Accept": "*/*",
             "Accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
         }
+        last_obj = {}
+        
+        break_label = False
 
         while retry_count > 0:
             resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
-            res_text = ""
 
             if resp.status_code != 200:
                 retry_count -= 1
@@ -390,17 +388,21 @@ class ChatBot:
                     raise ChatError(f"Failed to chat. ({resp.status_code})")
             
             try:
-                for line in resp.iter_lines():
+                for line in resp.iter_lines(decode_unicode=True):
                     if not line:
                         continue
-                    res = line.decode("utf-8")
+                    res = line
                     obj = json.loads(res)
                     type = obj['type']
 
-                    if type == "status" or type == "stream":
+                    if type == "status":
                         continue
+                    elif type == "stream":
+                        yield obj
                     elif type == "finalAnswer":
-                        res_text = obj["text"]
+                        
+                        last_obj = obj
+                        break_label = True
                         break
                     elif "error" in obj:
                         raise ChatError(obj["error"])
@@ -409,20 +411,161 @@ class ChatBot:
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
+                traceback.print_exc()
                 if "Model is overloaded" in str(e):
                     raise ModelOverloadedError("Model is overloaded, please try again later or switch to another model.")
                 raise ChatError(f"Failed to parse response: {res}")
+                # try to summarize the conversation and preserve the context.
+            if break_label:
+                break
+        
+        try:
+            if self.current_conversation in self.__not_summarize_cids:
+                self.summarize_conversation()
+                self.__not_summarize_cids.remove(self.current_conversation)
+            self.__preserve_context(ref_cid = self.current_conversation)
+        except:
+            pass
+        
+        yield last_obj
+        
+    def _stream_query_filter(
+        self,
+        *args,
+        **kwargs,
+    ) -> typing.Generator[dict, None, None]:
+        for resp in self._stream_query(*args, **kwargs):
+            if resp['type'] == "stream":
+                yield resp
+            
+    def _non_stream_query(
+        self,
+        text: str,
+        # web_search: bool=False,
+        temperature: float=0.1,
+        top_p: float=0.95,
+        repetition_penalty: float=1.2,
+        top_k: int=50,
+        truncate: int=1000,
+        watermark: bool=False,
+        max_new_tokens: int=1024,
+        stop: list=["</s>"],
+        return_full_text: bool=False,
+        use_cache: bool=False,
+        is_retry: bool=False,
+        retry_count: int=5,
+    ) -> dict:
+        for resp in self._stream_query(
+            text,
+            # web_search,
+            temperature,
+            top_p,
+            repetition_penalty,
+            top_k,
+            truncate,
+            watermark,
+            max_new_tokens,
+            stop,
+            return_full_text,
+            use_cache,
+            is_retry,
+            retry_count,
+        ):
+            if resp['type'] == "finalAnswer":
+                return resp
+    
+    def query(
+        self,
+        text: str,
+        # web_search: bool=False,
+        temperature: float=0.1,
+        top_p: float=0.95,
+        repetition_penalty: float=1.2,
+        top_k: int=50,
+        truncate: int=1000,
+        watermark: bool=False,
+        max_new_tokens: int=1024,
+        stop: list=["</s>"],
+        return_full_text: bool=False,
+        stream: bool=False,
+        use_cache: bool=False,
+        is_retry: bool=False,
+        retry_count: int=5,
+    ) -> typing.Generator[dict, None, None] | dict:
+        if stream:
+            return self._stream_query_filter(
+                text,
+                temperature,
+                top_p,
+                repetition_penalty,
+                top_k,
+                truncate,
+                watermark,
+                max_new_tokens,
+                stop,
+                return_full_text,
+                use_cache,
+                is_retry,
+                retry_count,
+            )
+        else:
+            return self._non_stream_query(
+                text,
+                # web_search,
+                temperature,
+                top_p,
+                repetition_penalty,
+                top_k,
+                truncate,
+                watermark,
+                max_new_tokens,
+                stop,
+                return_full_text,
+                use_cache,
+                is_retry,
+                retry_count,
+            )
 
-            # try to summarize the conversation and preserve the context.
-            try:
-                if self.current_conversation in self.__not_summarize_cids:
-                    self.summarize_conversation()
-                    self.__not_summarize_cids.remove(self.current_conversation)
-                self.__preserve_context(ref_cid = self.current_conversation)
-            except:
-                pass
-
-            return res_text.strip()
+    def chat(
+        self,
+        text: str,
+        # web_search: bool=False,
+        temperature: float=0.1,
+        top_p: float=0.95,
+        repetition_penalty: float=1.2,
+        top_k: int=50,
+        truncate: int=1000,
+        watermark: bool=False,
+        max_new_tokens: int=1024,
+        stop: list=["</s>"],
+        return_full_text: bool=False,
+        stream: bool=False,  # make no sense
+        use_cache: bool=False,
+        is_retry: bool=False,
+        retry_count: int=5,
+    ):
+        '''
+        Send a message to the current conversation. Return the response text.
+        You can customize these optional parameters.
+        You can turn on the web search by set the parameter `web_search` to True
+        '''
+        return self.query(
+            text,
+            # web_search,
+            temperature,
+            top_p,
+            repetition_penalty,
+            top_k,
+            truncate,
+            watermark,
+            max_new_tokens,
+            stop,
+            return_full_text,
+            False,
+            use_cache,
+            is_retry,
+            retry_count,
+        )['text']
 
     def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = ""):
         # print("preserve_context")
