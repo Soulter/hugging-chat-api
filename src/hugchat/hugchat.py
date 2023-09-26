@@ -491,7 +491,7 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ) -> typing.Generator[dict, None, None] | dict:
+    ) -> typing.Union[typing.Generator[dict, None, None], dict]:
         if stream:
             return self._stream_query_filter(
                 text,
