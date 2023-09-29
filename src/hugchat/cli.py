@@ -40,10 +40,19 @@ def cli():
         action="store_true",
         help="Require Password to login"
     )
+    parser.add_argument(
+        "-s",
+        action="store_true",
+        help="Option to enable streaming model output"
+    )
+
     args = parser.parse_args()
+
     email = args.u
     inputpass = args.p
+    streamoutput = args.s
     cookies = None
+
     if CHECK_BEFORE_PASSWORD:
         if not email:
             email = EMAIL
@@ -213,8 +222,15 @@ def cli():
         
         else:
             try:
-                res = chatbot.chat(question)
-                print("< " + res)
+                if not streamoutput:
+                    res = chatbot.chat(question)
+                    print("< " + res)
+                else:
+                    res = chatbot.query(question, stream=True)
+                    print("<", end="", flush=True)
+                    for chunk in res:
+                        print(chunk['token'], end="", flush=True)
+                    print()
             except Exception as e:
                 print(traceback.format_exc())
                 print(f"[Error] {str(e)}")
