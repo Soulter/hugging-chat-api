@@ -229,8 +229,6 @@ class ChatBot:
         else:
             self.conversation_id_list.pop(self.conversation_id_list.index(conversation_id))
             
-    
-    
     def get_available_llm_models(self) -> list:
         '''
         Get all available models that exists in huggingface.co/chat.
@@ -239,16 +237,19 @@ class ChatBot:
         return self.llms
 
     def set_share_conversations(self, val: bool = True):
-        setting = {
-            "ethicsModalAcceptedAt": "",
-            "searchEnabled": "true",
-            "activeModel": 'tiiuae/falcon-180B-chat',#'meta-llama/Llama-2-70b-chat-hf',
+        settings = {
+            "shareConversationsWithModelAuthors": ("", "on" if val else "")
         }
-        if val:
-            setting['shareConversationsWithModelAuthors'] = 'on'
 
-        self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data=setting)
+        self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
 
+    def set_system_prompt(self, prompt: str):
+        # We might need to update this setting again if the user changes the model
+        settings = {
+            "customPrompts": ("", json.dumps({self.active_model: prompt})),
+        }
+
+        self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
 
     def switch_llm(self, index: int) -> bool:
         '''
