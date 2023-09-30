@@ -218,7 +218,7 @@ class ChatBot:
         '''
 
         if conversation_id is None:
-            raise DeleteConversationError("conversation_id is required.")
+            conversation_id = self.current_conversation
 
         headers = self.get_headers()
 
