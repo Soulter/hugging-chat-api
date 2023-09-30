@@ -92,6 +92,12 @@ Simply run the following command in your terminal to start the CLI mode
 python -m hugchat.cli
 ```
 
+CLI params:
+
+- `-u <your huggingface email>` : Provide account email to login.
+- `-p` : Force request password to login, ignores saved cookies.
+- `-s` : Enable streaming mode output in CLI.
+
 Commands in cli mode:
 
 - `/new` : Create and switch to a new conversation.

@@ -95,6 +95,12 @@ chatbot.switch_llm(1) # 切换到 `meta-llama/Llama-2-70b-chat-hf`
 python -m hugchat.cli
 ```
 
+CLI模式接受启动参数：
+
+- `-u <your huggingface email>` : 提供账户邮箱以登录。
+- `-p` : 重新输入密码，忽略已保存的cookies。
+- `-s` : 在CLI模式中启用流式输出。
+
 CLI模式中的命令：
 
 - `/new` : 创建并切换到新的对话
