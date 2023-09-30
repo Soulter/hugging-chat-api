@@ -43,7 +43,7 @@ def cli():
     parser.add_argument(
         "-s",
         action="store_true",
-        help="Option to enable streaming model output"
+        help="Option to enable streaming mode output"
     )
 
     args = parser.parse_args()
