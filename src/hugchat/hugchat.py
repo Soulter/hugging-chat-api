@@ -91,11 +91,10 @@ class ChatBot:
         self.__not_summarize_cids = []
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
         self.llms = [ # The array is up to date as of 16/09/2023.
-                'meta-llama/Llama-2-70b-chat-hf', 
-                'OpenAssistant/oasst-sft-6-llama-30b-xor',
+                'meta-llama/Llama-2-70b-chat-hf'
                 'codellama/CodeLlama-34b-Instruct-hf', 
                 'tiiuae/falcon-180B-chat'
-                ]
+        ]
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
         self.system_prompts = {}
