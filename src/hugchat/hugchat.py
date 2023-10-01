@@ -10,6 +10,41 @@ from typing import Union
 
 from .exceptions import *
 
+class WebSearchSource:
+    title: str
+    link: str
+    hostname: str
+
+class QueryResult:
+    """
+    The result of a non-stream query.
+    """
+    text: str
+    web_search: bool
+    web_search_sources: list[WebSearchSource]
+
+    def __str__(self) -> str:
+        return self.text
+
+    def __add__(self, other: str) -> str:
+        return self.text + other
+    
+    def __radd__(self, other: str) -> str:
+        return other + self.text
+    
+    def __iadd__(self, other: str) -> str:
+        self.text += other
+        return self.text
+
+    def __getitem__(self, key: str) -> str:
+        if key == "text":
+            return self.text
+        elif key == "web_search":
+            return self.web_search
+        elif key == "web_search_sources":
+            return self.web_search_sources
+
+
 class ChatBot:
     
     cookies: dict
@@ -316,6 +351,7 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
+        _stream_yield_all: bool=False, # yield all responses from the server.
     ) -> typing.Generator[dict, None, None]:
         
         if retry_count <= 0:
@@ -377,22 +413,27 @@ class ChatBot:
                     obj = json.loads(res)
                     _type = obj['type']
 
-                    # print(obj)
-
-                    if _type == "status":
-                        continue
-                    elif _type == "stream":
+                    if _stream_yield_all:
+                        if _type == "finalAnswer":
+                            last_obj = obj
+                            break_label = True
+                            break
                         yield obj
-                    elif _type == "finalAnswer":
-                        last_obj = obj
-                        break_label = True
-                        break
-                    elif _type == "webSearch":
-                        continue
-                    elif "error" in obj:
-                        raise ChatError(obj["error"])
                     else:
-                        raise ChatError(obj)
+                        if _type == "status":
+                            continue
+                        elif _type == "stream":
+                            yield obj
+                        elif _type == "finalAnswer":
+                            last_obj = obj
+                            break_label = True
+                            break
+                        elif _type == "webSearch":
+                            continue
+                        elif "error" in obj:
+                            raise ChatError(obj["error"])
+                        else:
+                            raise ChatError(obj)
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
@@ -419,8 +460,12 @@ class ChatBot:
         **kwargs,
     ) -> typing.Generator[dict, None, None]:
         for resp in self._stream_query(*args, **kwargs):
-            if resp['type'] == "stream":
+            if '_stream_yield_all' in kwargs and kwargs['_stream_yield_all']:
+                # If _stream_yield_all is True, yield all responses from the server.
                 yield resp
+            else:
+                if resp['type'] == "stream":
+                    yield resp
 
     def _non_stream_query(
         self,
@@ -438,7 +483,10 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ) -> dict:
+    ) -> QueryResult:
+        query_result = QueryResult()
+        ws = []
+        sources = []
         for resp in self._stream_query(
             text,
             web_search,
@@ -454,9 +502,23 @@ class ChatBot:
             use_cache,
             is_retry,
             retry_count,
-        ):
+            _stream_yield_all=True,
+        ): 
+            if resp['type'] == "webSearch" and "messageType" in resp and resp["messageType"] == "sources":
+                sources = resp['sources']
+
             if resp['type'] == "finalAnswer":
-                return resp
+                query_result.text = resp['text']
+                query_result.web_search = web_search
+                query_result.web_search_sources = ws
+                for source in sources:
+                    wss = WebSearchSource()
+                    wss.title = source['title']
+                    wss.link = source['link']
+                    wss.hostname = source['hostname']
+                    ws.append(wss)
+            
+        return query_result
     
     def query(
         self,
@@ -472,11 +534,32 @@ class ChatBot:
         stop: list=["</s>"],
         return_full_text: bool=False,
         stream: bool=False,
+        _stream_yield_all: bool=False, # For stream mode, yield all responses from the server.
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ) -> typing.Union[typing.Generator[dict, None, None], dict]:
-        
+    ) -> typing.Union[typing.Generator[dict, None, None], QueryResult]:
+
+        """
+        Send a message to the current conversation. Return the response text.
+        You can customize these optional parameters.
+        You can turn on the web search by set the parameter `web_search` to True
+        When the `stream` is True, it will return a generator that yields the response from the server.
+        When the `stream` is False, it will return a QueryResult object.
+
+        About the QueryResult object:
+        - `text`: The response text.
+        - `web_search`: Whether the response contains web search results.
+        - `web_search_sources`: The web search results. It is a list of WebSearchSource objects.
+
+        You can:
+        - query_result.text
+        - query_result["text"]
+        - query_result.text + "a string"
+        - query_result.text += "a string"
+        - ...
+        """
+
         if stream:
             return self._stream_query_filter(
                 text,
@@ -493,6 +576,7 @@ class ChatBot:
                 use_cache,
                 is_retry,
                 retry_count,
+                _stream_yield_all = _stream_yield_all,
             )
         else:
             return self._non_stream_query(
@@ -529,11 +613,25 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ):
+    ) -> QueryResult:
         '''
         Send a message to the current conversation. Return the response text.
         You can customize these optional parameters.
         You can turn on the web search by set the parameter `web_search` to True
+
+        If you want to stream the response, use the `query` method instead and set it `stream` parameter to `True`.
+
+        About the QueryResult object:
+        - `text`: The response text.
+        - `web_search`: Whether the response contains web search results.
+        - `web_search_sources`: The web search results. It is a list of WebSearchSource objects.
+
+        You can:
+        - query_result.text
+        - query_result["text"]
+        - query_result.text + "a string"
+        - query_result.text += "a string"
+        - ...
         '''
 
         return self.query(
@@ -552,7 +650,7 @@ class ChatBot:
             use_cache,
             is_retry,
             retry_count,
-        )['text']
+        )
 
     def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = "") -> bool:
         headers = {
