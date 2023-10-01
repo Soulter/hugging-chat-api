@@ -280,6 +280,7 @@ class ChatBot:
     def set_system_prompt(self, prompt: str, llmIndex: int = None):
         '''
         Sets a system prompt for the given model index
+        You need to create a new conversation for this to work
         '''
 
         if llmIndex is None:
