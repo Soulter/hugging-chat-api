@@ -63,6 +63,7 @@ class ChatBot:
                 ]
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
+        self.system_prompts = {}
 
 
     def get_hc_session(self) -> Session:
@@ -243,10 +244,22 @@ class ChatBot:
 
         self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
 
-    def set_system_prompt(self, prompt: str):
+    def set_system_prompt(self, prompt: str, llmIndex: int = None):
+        '''
+        Sets a system prompt for the given model index
+        '''
+
+        if llmIndex is None:
+            llmIndex = self.get_active_llm_index()
+
+        elif llmIndex > len(self.llms)-1 or llmIndex < 0:
+            raise IndexError("Out of range of llm index")
+        
+        self.system_prompts[self.llms[llmIndex]] = prompt
+
         # We might need to update this setting again if the user changes the model
         settings = {
-            "customPrompts": ("", json.dumps({self.active_model: prompt})),
+            "customPrompts": ("", json.dumps(self.system_prompts))
         }
 
         self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
