@@ -121,6 +121,9 @@ Commands in cli mode:
 - `/llm <index>` : Switches model to given model index based on `/llm`.
 - `/sharewithauthor <on|off>` : Changes settings for sharing data with model author. On by default.
 - `/exit` : Closes CLI environment.
+- `/stream <on|off>`: streaming the response.
+- `/web <on|off>`: web search.
+- `/web-hint <on|off>`: display web search hint.
 
 - AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
 - Server resources are precious, it is not recommended to request this API in a high frequency.
