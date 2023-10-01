@@ -291,7 +291,6 @@ class ChatBot:
         
         self.system_prompts[self.llms[llmIndex]] = prompt
 
-        # We might need to update this setting again if the user changes the model
         settings = {
             "customPrompts": ("", json.dumps(self.system_prompts))
         }
