@@ -10,6 +10,7 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 
 > **Note**  
 > Recently new updates:
+> - Web search
 > - Memorize context
 > - Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
 
@@ -45,13 +46,24 @@ sign.saveCookiesToDir(cookie_path_dir)
 # Create a ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
 
-print(chatbot.query("Hi!")['text'])  # non stream response
+
+# non stream response
+query_result = chatbot.query("Hi!")
+print(query_result) # or query_result.text or query_result["text"]
 
 for resp in chatbot.query(
     "Hello",
     stream=True
 ):
     print(resp)  # stream response
+
+# Use web search *new
+query_result = chatbot.query("Hi!", web_search=True)
+print(query_result) # or query_result.text or query_result["text"]
+for source in query_result.web_search_sources:
+    print(source.link)
+    print(source.title)
+    print(source.hostname)
 
 # Create a new conversation
 id = chatbot.new_conversation()
