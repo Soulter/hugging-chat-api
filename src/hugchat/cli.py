@@ -50,7 +50,7 @@ def cli():
 
     email = args.u
     inputpass = args.p
-    streamoutput = args.s
+    streamoutput = True
     cookies = None
 
     if CHECK_BEFORE_PASSWORD:
@@ -87,6 +87,8 @@ def cli():
     
     chatbot = ChatBot(cookies=cookies)
     running = True
+    is_web_search = False
+    web_search_hint = False
     print("Login successfully🎉 You can input `/help` to open the command menu.")
     while running:
         question = input("> ")
@@ -215,7 +217,43 @@ def cli():
                     "/llm : Get available models you can switch to.\n"
                     "/llm <index> : Switches model to given model index based on /llm.\n"
                     "/exit : Closes CLI environment.\n"
+                    "/web <on|off> : Enables or disables web search.\n"
+                    "/web-hint <on|off> : Print the web search result on the screen.\n"
+                    "/stream <on|off> : Enables or disables streaming mode output.\n"
                 )
+
+        elif question.startswith("/web-hint"):
+            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+            if command:
+                if command in ["on","off"]:
+                    web_search_hint = True if command == "on" else False
+                    print(f"# Web search hint {'enabled' if web_search_hint else 'disabled'}")
+                else:
+                    print('# Invalid argument. Expected "on" or "off"')
+            else:
+                print("# Argument needed. (on|off)")
+
+        elif question.startswith("/web"):
+            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+            if command:
+                if command in ["on","off"]:
+                    is_web_search = True if command == "on" else False
+                    print(f"# Web search {'enabled' if is_web_search else 'disabled'}")
+                else:
+                    print('# Invalid argument. Expected "on" or "off"')
+            else:
+                print("# Argument needed. (on|off)")
+
+        elif question.startswith("/stream"):
+            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
+            if command:
+                if command in ["on","off"]:
+                    streamoutput = True if command == "on" else False
+                    print(f"# Streaming mode {'enabled' if streamoutput else 'disabled'}")
+                else:
+                    print('# Invalid argument. Expected "on" or "off"')
+            else:
+                print("# Argument needed. (on|off)")
 
         elif question.startswith("/"):
             print("# Invalid command")
@@ -226,10 +264,24 @@ def cli():
                     res = chatbot.chat(question)
                     print("< " + res)
                 else:
-                    res = chatbot.query(question, stream=True)
+
+                    res = chatbot.query(question, stream=True, _stream_yield_all=True, web_search=is_web_search)
                     print("<", end="", flush=True)
+
+                    sources = []
                     for chunk in res:
-                        print(chunk['token'], end="", flush=True)
+                        if web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'update':
+                            args = chunk['args'][0] if 'args' in chunk else ""
+                            print(f"🌍 Web Searching | {chunk['message']} {args}")
+                        elif web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'sources' and "sources" in chunk:
+                            sources = chunk['sources']
+                        elif chunk['type'] == 'stream':
+                            print(chunk['token'], end="", flush=True)
+
+                    if web_search_hint and len(sources) > 0:
+                        print(f"\nSources:")
+                        for i in range(len(sources)):
+                            print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
                     print()
             except Exception as e:
                 print(traceback.format_exc())
