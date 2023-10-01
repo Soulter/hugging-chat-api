@@ -10,6 +10,41 @@ from typing import Union
 
 from .exceptions import *
 
+class WebSearchSource:
+    title: str
+    link: str
+    hostname: str
+
+class QueryResult:
+    """
+    The result of a non-stream query.
+    """
+    text: str
+    web_search: bool
+    web_search_sources: list[WebSearchSource]
+
+    def __str__(self) -> str:
+        return self.text
+
+    def __add__(self, other: str) -> str:
+        return self.text + other
+    
+    def __radd__(self, other: str) -> str:
+        return other + self.text
+    
+    def __iadd__(self, other: str) -> str:
+        self.text += other
+        return self.text
+
+    def __getitem__(self, key: str) -> str:
+        if key == "text":
+            return self.text
+        elif key == "web_search":
+            return self.web_search
+        elif key == "web_search_sources":
+            return self.web_search_sources
+
+
 class ChatBot:
     
     cookies: dict
@@ -40,7 +75,7 @@ class ChatBot:
             # read cookies from path
             if not os.path.exists(cookie_path):
                 raise ChatBotInitError(f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api")
-            with open(cookie_path, "r") as f:
+            with open(cookie_path, "r", encoding='utf-8') as f:
                 cookies = json.load(f)
 
         # convert cookies to KV format
@@ -148,8 +183,6 @@ class ChatBot:
         while True:
             try:
                 resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": self.active_model}, headers=_header, cookies = self.get_cookies())
-                # print("new conversation")
-                # print(resp.text)
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
                 self.conversation_id_list.append(cid)
@@ -315,16 +348,10 @@ class ChatBot:
         r = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1", headers=self.get_headers(ref=True), cookies=self.get_cookies())
         return r.status_code == 200
 
-    # def _web_search(self, prompt: str) -> bool:
-    #     print("searching on web ...")
-    #     r = self.session.get(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/web-search?prompt={prompt}", headers=self.get_headers(ref=True), cookies=self.get_cookies(), timeout=300)
-    #     print("done")
-    #     return r.status_code == 200
-    
     def _stream_query(
         self,
         text: str,
-        # web_search: bool=False,
+        web_search: bool=False,
         temperature: float=0.1,
         top_p: float=0.95,
         repetition_penalty: float=1.2,
@@ -337,6 +364,7 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
+        _stream_yield_all: bool=False, # yield all responses from the server.
     ) -> typing.Generator[dict, None, None]:
         
         if retry_count <= 0:
@@ -345,12 +373,6 @@ class ChatBot:
             self.current_conversation = self.new_conversation()
         if text == "":
             raise Exception("the prompt can not be empty.")
-
-        # Invoke Web Search API
-        # if web_search:
-        #     res = self._web_search(text)
-        #     if not res:
-        #         print("Web search may failed.")
 
         req_json = {
             "inputs": text,
@@ -372,13 +394,8 @@ class ChatBot:
                     "id": str(uuid.uuid4()),
             },
             "stream": True,
+            "web_search": web_search,
         }
-        
-        # if web_search:
-        #     req_json["options"]["web_search_id"] = str(uuid.uuid4()).replace("-","")[0:24]
-        # print(req_json)
-        # print(self.session.cookies.get_dict())
-        # print(f"https://huggingface.co/chat/conversation/{self.now_conversation}")
         headers = {
             "Origin": "https://huggingface.co",
             "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
@@ -407,21 +424,29 @@ class ChatBot:
                         continue
                     res = line
                     obj = json.loads(res)
-                    type = obj['type']
+                    _type = obj['type']
 
-                    if type == "status":
-                        continue
-                    elif type == "stream":
+                    if _stream_yield_all:
+                        if _type == "finalAnswer":
+                            last_obj = obj
+                            break_label = True
+                            break
                         yield obj
-                    elif type == "finalAnswer":
-                        
-                        last_obj = obj
-                        break_label = True
-                        break
-                    elif "error" in obj:
-                        raise ChatError(obj["error"])
                     else:
-                        raise ChatError(obj)
+                        if _type == "status":
+                            continue
+                        elif _type == "stream":
+                            yield obj
+                        elif _type == "finalAnswer":
+                            last_obj = obj
+                            break_label = True
+                            break
+                        elif _type == "webSearch":
+                            continue
+                        elif "error" in obj:
+                            raise ChatError(obj["error"])
+                        else:
+                            raise ChatError(obj)
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
@@ -429,7 +454,6 @@ class ChatBot:
                 if "Model is overloaded" in str(e):
                     raise ModelOverloadedError("Model is overloaded, please try again later or switch to another model.")
                 raise ChatError(f"Failed to parse response: {res}")
-                # try to summarize the conversation and preserve the context.
             if break_label:
                 break
         
@@ -442,20 +466,24 @@ class ChatBot:
             pass
         
         yield last_obj
-        
+
     def _stream_query_filter(
         self,
         *args,
         **kwargs,
     ) -> typing.Generator[dict, None, None]:
         for resp in self._stream_query(*args, **kwargs):
-            if resp['type'] == "stream":
+            if '_stream_yield_all' in kwargs and kwargs['_stream_yield_all']:
+                # If _stream_yield_all is True, yield all responses from the server.
                 yield resp
-            
+            else:
+                if resp['type'] == "stream":
+                    yield resp
+
     def _non_stream_query(
         self,
         text: str,
-        # web_search: bool=False,
+        web_search: bool=False,
         temperature: float=0.1,
         top_p: float=0.95,
         repetition_penalty: float=1.2,
@@ -468,10 +496,13 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ) -> dict:
+    ) -> QueryResult:
+        query_result = QueryResult()
+        ws = []
+        sources = []
         for resp in self._stream_query(
             text,
-            # web_search,
+            web_search,
             temperature,
             top_p,
             repetition_penalty,
@@ -484,14 +515,28 @@ class ChatBot:
             use_cache,
             is_retry,
             retry_count,
-        ):
+            _stream_yield_all=True,
+        ): 
+            if resp['type'] == "webSearch" and "messageType" in resp and resp["messageType"] == "sources":
+                sources = resp['sources']
+
             if resp['type'] == "finalAnswer":
-                return resp
+                query_result.text = resp['text']
+                query_result.web_search = web_search
+                query_result.web_search_sources = ws
+                for source in sources:
+                    wss = WebSearchSource()
+                    wss.title = source['title']
+                    wss.link = source['link']
+                    wss.hostname = source['hostname']
+                    ws.append(wss)
+            
+        return query_result
     
     def query(
         self,
         text: str,
-        # web_search: bool=False,
+        web_search: bool=False,
         temperature: float=0.1,
         top_p: float=0.95,
         repetition_penalty: float=1.2,
@@ -502,13 +547,36 @@ class ChatBot:
         stop: list=["</s>"],
         return_full_text: bool=False,
         stream: bool=False,
+        _stream_yield_all: bool=False, # For stream mode, yield all responses from the server.
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ) -> typing.Union[typing.Generator[dict, None, None], dict]:
+    ) -> typing.Union[typing.Generator[dict, None, None], QueryResult]:
+
+        """
+        Send a message to the current conversation. Return the response text.
+        You can customize these optional parameters.
+        You can turn on the web search by set the parameter `web_search` to True
+        When the `stream` is True, it will return a generator that yields the response from the server.
+        When the `stream` is False, it will return a QueryResult object.
+
+        About the QueryResult object:
+        - `text`: The response text.
+        - `web_search`: Whether the response contains web search results.
+        - `web_search_sources`: The web search results. It is a list of WebSearchSource objects.
+
+        You can:
+        - query_result.text
+        - query_result["text"]
+        - query_result.text + "a string"
+        - query_result.text += "a string"
+        - ...
+        """
+
         if stream:
             return self._stream_query_filter(
                 text,
+                web_search,
                 temperature,
                 top_p,
                 repetition_penalty,
@@ -521,11 +589,12 @@ class ChatBot:
                 use_cache,
                 is_retry,
                 retry_count,
+                _stream_yield_all = _stream_yield_all,
             )
         else:
             return self._non_stream_query(
                 text,
-                # web_search,
+                web_search,
                 temperature,
                 top_p,
                 repetition_penalty,
@@ -543,7 +612,7 @@ class ChatBot:
     def chat(
         self,
         text: str,
-        # web_search: bool=False,
+        web_search: bool=False,
         temperature: float=0.1,
         top_p: float=0.95,
         repetition_penalty: float=1.2,
@@ -557,15 +626,30 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ):
+    ) -> QueryResult:
         '''
         Send a message to the current conversation. Return the response text.
         You can customize these optional parameters.
         You can turn on the web search by set the parameter `web_search` to True
+
+        If you want to stream the response, use the `query` method instead and set it `stream` parameter to `True`.
+
+        About the QueryResult object:
+        - `text`: The response text.
+        - `web_search`: Whether the response contains web search results.
+        - `web_search_sources`: The web search results. It is a list of WebSearchSource objects.
+
+        You can:
+        - query_result.text
+        - query_result["text"]
+        - query_result.text + "a string"
+        - query_result.text += "a string"
+        - ...
         '''
+
         return self.query(
             text,
-            # web_search,
+            web_search,
             temperature,
             top_p,
             repetition_penalty,
@@ -579,10 +663,9 @@ class ChatBot:
             use_cache,
             is_retry,
             retry_count,
-        )['text']
+        )
 
-    def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = ""):
-        # print("preserve_context")
+    def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = "") -> bool:
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203",
             'Accept': "*/*",
@@ -599,11 +682,7 @@ class ChatBot:
             cid = self.current_conversation
         url = f"https://huggingface.co/chat/conversation/{cid}/__data.json?x-sveltekit-invalidated={ending}"
         response = self.session.get(url, cookies = cookie, headers = headers, data = {})
-        if response.status_code == 200:
-            return {'message': "Context Successfully Preserved", "status":200}
-        else:
-            return {'message': "Internal Error", "status": 500}
-
+        return response.status_code == 200
 
 if __name__ == "__main__":
     bot = ChatBot()
@@ -613,4 +692,3 @@ if __name__ == "__main__":
     print(summary)
     sharelink = bot.share_conversation()
     print(sharelink)
-
