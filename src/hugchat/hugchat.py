@@ -91,13 +91,13 @@ class ChatBot:
         self.__not_summarize_cids = []
         self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
         self.llms = [ # The array is up to date as of 16/09/2023.
-                'meta-llama/Llama-2-70b-chat-hf', 
-                'OpenAssistant/oasst-sft-6-llama-30b-xor',
+                'meta-llama/Llama-2-70b-chat-hf'
                 'codellama/CodeLlama-34b-Instruct-hf', 
                 'tiiuae/falcon-180B-chat'
-                ]
+        ]
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
+        self.system_prompts = {}
 
 
     def get_hc_session(self) -> Session:
@@ -276,10 +276,22 @@ class ChatBot:
 
         self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
 
-    def set_system_prompt(self, prompt: str):
-        # We might need to update this setting again if the user changes the model
+    def set_system_prompt(self, prompt: str, llmIndex: int = None):
+        '''
+        Sets a system prompt for the given model index
+        You need to create a new conversation for this to work
+        '''
+
+        if llmIndex is None:
+            llmIndex = self.get_active_llm_index()
+
+        elif llmIndex > len(self.llms)-1 or llmIndex < 0:
+            raise IndexError("Out of range of llm index")
+        
+        self.system_prompts[self.llms[llmIndex]] = prompt
+
         settings = {
-            "customPrompts": ("", json.dumps({self.active_model: prompt})),
+            "customPrompts": ("", json.dumps(self.system_prompts))
         }
 
         self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
