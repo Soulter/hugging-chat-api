@@ -94,7 +94,7 @@ class ChatBot:
                 'meta-llama/Llama-2-70b-chat-hf'
                 'codellama/CodeLlama-34b-Instruct-hf', 
                 'tiiuae/falcon-180B-chat'
-        ] # The array is up to date as of September 2, 2023
+        ] # The array is up to date as of October 2, 2023
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
         self.system_prompts = {}
