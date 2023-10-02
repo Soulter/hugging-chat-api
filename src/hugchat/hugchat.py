@@ -136,7 +136,7 @@ class ChatBot:
     # NOTE: To create a copy when calling this, call it inside of list().
     #       If not, when updating or altering the values in the variable will
     #       also be applied to this class's variable.
-    #       This behaviour is with any function returning self.<var_name>. It
+    #       This behavior is with any function returning self.<var_name>. It
     #       acts as a pointer to the data in the object.
     #
     # Returns a pointer to this objects list that contains id of conversations.
@@ -300,7 +300,7 @@ class ChatBot:
         '''
         Attempts to change current conversation's Large Language Model.
         Requires an index to indicate the model you want to switch.
-        See self.llms for avalible models.
+        See self.llms for available models.
 
         Note: 1. The effect of switch is limited to the current conversation,
         You can manually switch the llm when you start a new conversation.
@@ -308,7 +308,7 @@ class ChatBot:
         2. Only works *after creating a new conversation.*
         :)
         '''
-        # TODO: I will work on making it have a model for each conversation that is changable. - @Zekaroni
+        # TODO: I will work on making it have a model for each conversation that is changeable. - @Zekaroni
         
         if index < len(self.llms) and index >= 0:
             self.active_model = self.llms[index]

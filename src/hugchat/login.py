@@ -57,7 +57,7 @@ class Login:
     def SigninWithEmail(self):
         """
         Login through your email and password.
-        PS: I found that it doesn't have any type of encrytion till now,
+        PS: I found that it doesn't have any type of encryption till now,
         which could expose your password to the internet.
         """
         url = "https://huggingface.co/login"
