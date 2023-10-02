@@ -89,12 +89,12 @@ class ChatBot:
         self.session = self.get_hc_session()
         self.conversation_id_list = []
         self.__not_summarize_cids = []
-        self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
-        self.llms = [ # The array is up to date as of 16/09/2023.
+        self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
+        self.llms = [
                 'meta-llama/Llama-2-70b-chat-hf'
                 'codellama/CodeLlama-34b-Instruct-hf', 
                 'tiiuae/falcon-180B-chat'
-        ]
+        ] # The array is up to date as of September 2, 2023
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
         self.system_prompts = {}
@@ -158,7 +158,7 @@ class ChatBot:
         })
 
         if response.status_code != 200:
-            raise Exception(f"Failed to accept ethics modal with status code {response.status_code}. {response.content.decode()}")
+            raise Exception(f"Failed to accept ethics modal with status code: {response.status_code}. {response.content.decode()}")
         
         return True
     
@@ -193,7 +193,7 @@ class ChatBot:
                 err_count += 1
                 logging.debug(f" Failed to create new conversation. Retrying... ({err_count})")
                 if err_count > 5:
-                    raise CreateConversationError(f"Failed to create new conversation. ({err_count})")
+                    raise CreateConversationError(f"Failed to create new conversation with status code: {resp.status_code}. ({err_count})")
                 continue
     
     def change_conversation(self, conversation_id: str) -> bool:
@@ -270,6 +270,9 @@ class ChatBot:
         return self.llms
 
     def set_share_conversations(self, val: bool = True):
+        '''
+        Sets the "Share Conversation with Model Authors setting" to the given val variable
+        '''
         settings = {
             "shareConversationsWithModelAuthors": ("", "on" if val else "")
         }
