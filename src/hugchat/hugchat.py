@@ -217,7 +217,7 @@ class ChatBot:
         r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/summarize", headers=headers, cookies=self.get_cookies())
         
         if r.status_code != 200:
-            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
+            raise Exception(f"Failed to summarize conversation with status code: {r.status_code}")
         
         response = r.json()
         if 'title' in response:
@@ -237,7 +237,7 @@ class ChatBot:
         r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/share", headers=headers, cookies=self.get_cookies())
         
         if r.status_code != 200:
-            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
+            raise Exception(f"Failed to share conversation with status code: {r.status_code}")
         
         response = r.json()
         if 'url' in response:
