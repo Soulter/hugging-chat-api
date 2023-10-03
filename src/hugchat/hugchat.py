@@ -91,7 +91,7 @@ class ChatBot:
         self.__not_summarize_cids = []
         self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
         self.llms = [
-                'meta-llama/Llama-2-70b-chat-hf'
+                'meta-llama/Llama-2-70b-chat-hf',
                 'codellama/CodeLlama-34b-Instruct-hf', 
                 'tiiuae/falcon-180B-chat'
         ] # The array is up to date as of October 2, 2023
