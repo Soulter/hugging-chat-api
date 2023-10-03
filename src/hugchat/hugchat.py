@@ -205,26 +205,6 @@ class ChatBot:
         self.current_conversation = conversation_id
         return True
     
-        
-    def summarize_conversation(self, conversation_id: str = None) -> str:
-        '''
-        Return a summary of the conversation.
-        '''
-        if conversation_id is None:
-            conversation_id = self.current_conversation
-        
-        headers = self.get_headers(ref = True)
-        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/summarize", headers=headers, cookies=self.get_cookies())
-        
-        if r.status_code != 200:
-            raise Exception(f"Failed to summarize conversation with status code: {r.status_code}")
-        
-        response = r.json()
-        if 'title' in response:
-            return response['title']
-
-        raise Exception(f"Unknown server response: {response}")
-    
     def share_conversation(self, conversation_id: str = None) -> str:
         '''
         Return a share link of the conversation.
