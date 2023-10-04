@@ -89,15 +89,15 @@ class ChatBot:
         self.session = self.get_hc_session()
         self.conversation_id_list = []
         self.__not_summarize_cids = []
-        self.accepted_welcome_modal = False # Only when accepted, it can create a new conversation.
-        self.llms = [ # The array is up to date as of 16/09/2023.
-                'meta-llama/Llama-2-70b-chat-hf', 
-                'OpenAssistant/oasst-sft-6-llama-30b-xor',
+        self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
+        self.llms = [
+                'meta-llama/Llama-2-70b-chat-hf',
                 'codellama/CodeLlama-34b-Instruct-hf', 
                 'tiiuae/falcon-180B-chat'
-                ]
+        ] # The array is up to date as of October 2, 2023
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
+        self.system_prompts = {}
 
 
     def get_hc_session(self) -> Session:
@@ -136,7 +136,7 @@ class ChatBot:
     # NOTE: To create a copy when calling this, call it inside of list().
     #       If not, when updating or altering the values in the variable will
     #       also be applied to this class's variable.
-    #       This behaviour is with any function returning self.<var_name>. It
+    #       This behavior is with any function returning self.<var_name>. It
     #       acts as a pointer to the data in the object.
     #
     # Returns a pointer to this objects list that contains id of conversations.
@@ -158,7 +158,7 @@ class ChatBot:
         })
 
         if response.status_code != 200:
-            raise Exception(f"Failed to accept ethics modal with status code {response.status_code}. {response.content.decode()}")
+            raise Exception(f"Failed to accept ethics modal with status code: {response.status_code}. {response.content.decode()}")
         
         return True
     
@@ -193,7 +193,7 @@ class ChatBot:
                 err_count += 1
                 logging.debug(f" Failed to create new conversation. Retrying... ({err_count})")
                 if err_count > 5:
-                    raise CreateConversationError(f"Failed to create new conversation. ({err_count})")
+                    raise CreateConversationError(f"Failed to create new conversation with status code: {resp.status_code}. ({err_count})")
                 continue
     
     def change_conversation(self, conversation_id: str) -> bool:
@@ -204,26 +204,6 @@ class ChatBot:
             raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
         self.current_conversation = conversation_id
         return True
-    
-        
-    def summarize_conversation(self, conversation_id: str = None) -> str:
-        '''
-        Return a summary of the conversation.
-        '''
-        if conversation_id is None:
-            conversation_id = self.current_conversation
-        
-        headers = self.get_headers(ref = True)
-        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/summarize", headers=headers, cookies=self.get_cookies())
-        
-        if r.status_code != 200:
-            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
-        
-        response = r.json()
-        if 'title' in response:
-            return response['title']
-
-        raise Exception(f"Unknown server response: {response}")
     
     def share_conversation(self, conversation_id: str = None) -> str:
         '''
@@ -237,7 +217,7 @@ class ChatBot:
         r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/share", headers=headers, cookies=self.get_cookies())
         
         if r.status_code != 200:
-            raise Exception(f"Failed to send chat message with status code: {r.status_code}")
+            raise Exception(f"Failed to share conversation with status code: {r.status_code}")
         
         response = r.json()
         if 'url' in response:
@@ -270,16 +250,31 @@ class ChatBot:
         return self.llms
 
     def set_share_conversations(self, val: bool = True):
+        '''
+        Sets the "Share Conversation with Model Authors setting" to the given val variable
+        '''
         settings = {
             "shareConversationsWithModelAuthors": ("", "on" if val else "")
         }
 
         self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
 
-    def set_system_prompt(self, prompt: str):
-        # We might need to update this setting again if the user changes the model
+    def set_system_prompt(self, prompt: str, llmIndex: int = None):
+        '''
+        Sets a system prompt for the given model index
+        You need to create a new conversation for this to work
+        '''
+
+        if llmIndex is None:
+            llmIndex = self.get_active_llm_index()
+
+        elif llmIndex > len(self.llms)-1 or llmIndex < 0:
+            raise IndexError("Out of range of llm index")
+        
+        self.system_prompts[self.llms[llmIndex]] = prompt
+
         settings = {
-            "customPrompts": ("", json.dumps({self.active_model: prompt})),
+            "customPrompts": ("", json.dumps(self.system_prompts))
         }
 
         self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
@@ -288,7 +283,7 @@ class ChatBot:
         '''
         Attempts to change current conversation's Large Language Model.
         Requires an index to indicate the model you want to switch.
-        See self.llms for avalible models.
+        See self.llms for available models.
 
         Note: 1. The effect of switch is limited to the current conversation,
         You can manually switch the llm when you start a new conversation.
@@ -296,7 +291,7 @@ class ChatBot:
         2. Only works *after creating a new conversation.*
         :)
         '''
-        # TODO: I will work on making it have a model for each conversation that is changable. - @Zekaroni
+        # TODO: I will work on making it have a model for each conversation that is changeable. - @Zekaroni
         
         if index < len(self.llms) and index >= 0:
             self.active_model = self.llms[index]
@@ -445,9 +440,9 @@ class ChatBot:
                 break
         
         try:
-            if self.current_conversation in self.__not_summarize_cids:
-                self.summarize_conversation()
-                self.__not_summarize_cids.remove(self.current_conversation)
+            # if self.current_conversation in self.__not_summarize_cids:
+            #     self.summarize_conversation()
+            #     self.__not_summarize_cids.remove(self.current_conversation)
             self.__preserve_context(ref_cid = self.current_conversation)
         except:
             pass
@@ -675,7 +670,7 @@ if __name__ == "__main__":
     bot = ChatBot()
     message_content = bot.chat("Hello", max_new_tokens=10)
     print(message_content)
-    summary = bot.summarize_conversation()
-    print(summary)
+    # summary = bot.summarize_conversation()
+    # print(summary)
     sharelink = bot.share_conversation()
     print(sharelink)
