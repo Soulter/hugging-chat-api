@@ -51,11 +51,12 @@ chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercoo
 query_result = chatbot.query("Hi!")
 print(query_result) # or query_result.text or query_result["text"]
 
+# stream response
 for resp in chatbot.query(
     "Hello",
     stream=True
 ):
-    print(resp)  # stream response
+    print(resp)
 
 # Use web search *new
 query_result = chatbot.query("Hi!", web_search=True)
@@ -93,6 +94,7 @@ The `query()` function receives these parameters:
 - `use_cache`: Optional[bool]. Default is False
 - `is_retry`: Optional[bool]. Default is False
 - `retry_count`: Optional[int]. Number of retries for requesting huggingchat. Default is 5
+- `web_search` : Optional[bool]. Whether to use online search.
 
 ### CLI
 

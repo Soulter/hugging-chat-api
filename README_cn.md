@@ -10,6 +10,7 @@
 
 > **Note**  
 > 近期更新
+> - 联网搜索
 > - 上下文记忆  
 > - 支持更改所使用的模型，见[#56](https://github.com/Soulter/hugging-chat-api/issues/56) (v0.0.9)
 
@@ -47,13 +48,24 @@ sign.saveCookiesToDir(cookie_path_dir)
 # 创建 ChatBot 对象
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
 
-print(chatbot.query("Hi!")['text'])  # 非流式响应
+# 非流式响应
+query_result = chatbot.query("Hi!")
+print(query_result)  # 纯文本为 query_result["text"]
 
+# 流式响应
 for resp in chatbot.query(
     "Hello",
     stream=True
 ):
-    print(resp)  # 流式响应
+    print(resp)
+
+# 使用联网搜索功能
+query_result = chatbot.query("Hi!", web_search=True)
+print(query_result) # or query_result.text or query_result["text"]
+for source in query_result.web_search_sources:
+    print(source.link)
+    print(source.title)
+    print(source.hostname)
 
 # 创建新的对话
 id = chatbot.new_conversation()
@@ -84,6 +96,7 @@ chatbot.switch_llm(1) # 切换到 `meta-llama/Llama-2-70b-chat-hf`
 - `use_cache`: Optional[bool]. Default is False
 - `is_retry`: Optional[bool]. Default is False
 - `retry_count`: 重试次数. Optional[int]. Default is 5
+- `web_search` : 是否使用联网搜索. Optional[bool]
 
 ### CLI
 
@@ -112,6 +125,9 @@ CLI模式中的命令：
 - `/llm <index>` : 通过编号切换到 `/llm` 中可用的某个模型
 - `/sharewithauthor <on|off>` : 设置是否与模型作者共享对话数据，默认启用
 - `/exit`: 退出CLI环境
+- `/stream <on|off>`: 启用或关闭流式输出
+- `/web <on|off>`: 启用或关闭联网搜索
+- `/web-hint <on|off>`: 启用或关闭显示web搜索提示
 
 - AI是一个活跃的研究领域，存在一些已知问题，例如生成偏见和错误信息。请不要将此应用用于重大决策或咨询。
 - 服务器资源宝贵，不建议高频率请求此API。
