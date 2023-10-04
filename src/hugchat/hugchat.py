@@ -440,9 +440,9 @@ class ChatBot:
                 break
         
         try:
-            if self.current_conversation in self.__not_summarize_cids:
-                self.summarize_conversation()
-                self.__not_summarize_cids.remove(self.current_conversation)
+            # if self.current_conversation in self.__not_summarize_cids:
+            #     self.summarize_conversation()
+            #     self.__not_summarize_cids.remove(self.current_conversation)
             self.__preserve_context(ref_cid = self.current_conversation)
         except:
             pass
@@ -670,7 +670,7 @@ if __name__ == "__main__":
     bot = ChatBot()
     message_content = bot.chat("Hello", max_new_tokens=10)
     print(message_content)
-    summary = bot.summarize_conversation()
-    print(summary)
+    # summary = bot.summarize_conversation()
+    # print(summary)
     sharelink = bot.share_conversation()
     print(sharelink)
