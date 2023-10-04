@@ -12,7 +12,7 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 > Recently new updates:
 > - Web search
 > - Memorize context
-> - Change LLMs supported. See more at https://github.com/Soulter/hugging-chat-api/issues/56 (v0.0.9)
+> - Supports for changing LLMs ([#56](https://github.com/Soulter/hugging-chat-api/issues/56)) (v0.0.9)
 
 ## Installation
 ```bash
