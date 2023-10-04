@@ -8,6 +8,8 @@ import typing
 import traceback
 from typing import Union
 
+from src.hugchat.message import Message
+
 from .exceptions import *
 
 class WebSearchSource:
@@ -408,27 +410,27 @@ class ChatBot:
                     obj = json.loads(res)
                     _type = obj['type']
 
-                    if _stream_yield_all:
-                        if _type == "finalAnswer":
-                            last_obj = obj
-                            break_label = True
-                            break
-                        yield obj
-                    else:
-                        if _type == "status":
-                            continue
-                        elif _type == "stream":
-                            yield obj
-                        elif _type == "finalAnswer":
-                            last_obj = obj
-                            break_label = True
-                            break
-                        elif _type == "webSearch":
-                            continue
-                        elif "error" in obj:
-                            raise ChatError(obj["error"])
-                        else:
-                            raise ChatError(obj)
+                    if _type == "finalAnswer":
+                        last_obj = obj
+                        break_label = True
+                        break
+                    yield obj
+                    # if _stream_yield_all:
+                    # else:
+                    #     if _type == "status":
+                    #         continue
+                    #     elif _type == "stream":
+                    #         yield obj
+                    #     elif _type == "finalAnswer":
+                    #         last_obj = obj
+                    #         break_label = True
+                    #         break
+                    #     elif _type == "webSearch":
+                    #         continue
+                    #     elif "error" in obj:
+                    #         raise ChatError(obj["error"])
+                    #     else:
+                    #         raise ChatError(obj)
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
@@ -453,67 +455,66 @@ class ChatBot:
         self,
         *args,
         **kwargs,
-    ) -> typing.Generator[dict, None, None]:
-        for resp in self._stream_query(*args, **kwargs):
-            if '_stream_yield_all' in kwargs and kwargs['_stream_yield_all']:
-                # If _stream_yield_all is True, yield all responses from the server.
-                yield resp
-            else:
-                if resp['type'] == "stream":
-                    yield resp
+    ) -> Message:
+        msg = Message(
+            g=self._stream_query(*args, **kwargs),
+            _stream_yield_all=kwargs['_stream_yield_all'],
+            web_search=kwargs["web_search"]
+        )
+        return msg
 
-    def _non_stream_query(
-        self,
-        text: str,
-        web_search: bool=False,
-        temperature: float=0.1,
-        top_p: float=0.95,
-        repetition_penalty: float=1.2,
-        top_k: int=50,
-        truncate: int=1000,
-        watermark: bool=False,
-        max_new_tokens: int=1024,
-        stop: list=["</s>"],
-        return_full_text: bool=False,
-        use_cache: bool=False,
-        is_retry: bool=False,
-        retry_count: int=5,
-    ) -> QueryResult:
-        query_result = QueryResult()
-        ws = []
-        sources = []
-        for resp in self._stream_query(
-            text,
-            web_search,
-            temperature,
-            top_p,
-            repetition_penalty,
-            top_k,
-            truncate,
-            watermark,
-            max_new_tokens,
-            stop,
-            return_full_text,
-            use_cache,
-            is_retry,
-            retry_count,
-            _stream_yield_all=True,
-        ): 
-            if resp['type'] == "webSearch" and "messageType" in resp and resp["messageType"] == "sources":
-                sources = resp['sources']
-
-            if resp['type'] == "finalAnswer":
-                query_result.text = resp['text']
-                query_result.web_search = web_search
-                query_result.web_search_sources = ws
-                for source in sources:
-                    wss = WebSearchSource()
-                    wss.title = source['title']
-                    wss.link = source['link']
-                    wss.hostname = source['hostname']
-                    ws.append(wss)
-            
-        return query_result
+    # def _non_stream_query(
+    #     self,
+    #     text: str,
+    #     web_search: bool=False,
+    #     temperature: float=0.1,
+    #     top_p: float=0.95,
+    #     repetition_penalty: float=1.2,
+    #     top_k: int=50,
+    #     truncate: int=1000,
+    #     watermark: bool=False,
+    #     max_new_tokens: int=1024,
+    #     stop: list=["</s>"],
+    #     return_full_text: bool=False,
+    #     use_cache: bool=False,
+    #     is_retry: bool=False,
+    #     retry_count: int=5,
+    # ) -> QueryResult:
+    #     query_result = QueryResult()
+    #     ws = []
+    #     sources = []
+    #     for resp in self._stream_query(
+    #         text,
+    #         web_search,
+    #         temperature,
+    #         top_p,
+    #         repetition_penalty,
+    #         top_k,
+    #         truncate,
+    #         watermark,
+    #         max_new_tokens,
+    #         stop,
+    #         return_full_text,
+    #         use_cache,
+    #         is_retry,
+    #         retry_count,
+    #         _stream_yield_all=True,
+    #     ): 
+    #         if resp['type'] == "webSearch" and "messageType" in resp and resp["messageType"] == "sources":
+    #             sources = resp['sources']
+    #
+    #         if resp['type'] == "finalAnswer":
+    #             query_result.text = resp['text']
+    #             query_result.web_search = web_search
+    #             query_result.web_search_sources = ws
+    #             for source in sources:
+    #                 wss = WebSearchSource()
+    #                 wss.title = source['title']
+    #                 wss.link = source['link']
+    #                 wss.hostname = source['hostname']
+    #                 ws.append(wss)
+    #         
+    #     return query_result
     
     def query(
         self,
@@ -533,9 +534,13 @@ class ChatBot:
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ) -> typing.Union[typing.Generator[dict, None, None], QueryResult]:
+    # ) -> typing.Union[typing.Generator[dict, None, None], QueryResult]:
+    ) -> Message:
 
         """
+        **Deprecated**
+        Same as chat now
+
         Send a message to the current conversation. Return the response text.
         You can customize these optional parameters.
         You can turn on the web search by set the parameter `web_search` to True
@@ -554,42 +559,54 @@ class ChatBot:
         - query_result.text += "a string"
         - ...
         """
+        msg = Message(
+            g=self._stream_query(
+                text=text,
+                web_search=web_search,
+                _stream_yield_all=_stream_yield_all, # For stream mode, yield all responses from the server.
+                retry_count=retry_count,
+            ),
+            _stream_yield_all=_stream_yield_all,
+            web_search=web_search
+        )
+        return msg
+    
 
-        if stream:
-            return self._stream_query_filter(
-                text,
-                web_search,
-                temperature,
-                top_p,
-                repetition_penalty,
-                top_k,
-                truncate,
-                watermark,
-                max_new_tokens,
-                stop,
-                return_full_text,
-                use_cache,
-                is_retry,
-                retry_count,
-                _stream_yield_all = _stream_yield_all,
-            )
-        else:
-            return self._non_stream_query(
-                text,
-                web_search,
-                temperature,
-                top_p,
-                repetition_penalty,
-                top_k,
-                truncate,
-                watermark,
-                max_new_tokens,
-                stop,
-                return_full_text,
-                use_cache,
-                is_retry,
-                retry_count,
-            )
+        # if stream:
+        #     return self._stream_query_filter(
+        #         text,
+        #         web_search,
+        #         temperature,
+        #         top_p,
+        #         repetition_penalty,
+        #         top_k,
+        #         truncate,
+        #         watermark,
+        #         max_new_tokens,
+        #         stop,
+        #         return_full_text,
+        #         use_cache,
+        #         is_retry,
+        #         retry_count,
+        #         _stream_yield_all = _stream_yield_all,
+        #     )
+        # else:
+        #     return self._non_stream_query(
+        #         text,
+        #         web_search,
+        #         temperature,
+        #         top_p,
+        #         repetition_penalty,
+        #         top_k,
+        #         truncate,
+        #         watermark,
+        #         max_new_tokens,
+        #         stop,
+        #         return_full_text,
+        #         use_cache,
+        #         is_retry,
+        #         retry_count,
+        #     )
 
     def chat(
         self,
@@ -605,10 +622,11 @@ class ChatBot:
         stop: list=["</s>"],
         return_full_text: bool=False,
         stream: bool=False,  # make no sense
+        _stream_yield_all: bool=False, # For stream mode, yield all responses from the server.
         use_cache: bool=False,
         is_retry: bool=False,
         retry_count: int=5,
-    ) -> QueryResult:
+    ) -> Message:
         '''
         Send a message to the current conversation. Return the response text.
         You can customize these optional parameters.
@@ -628,24 +646,37 @@ class ChatBot:
         - query_result.text += "a string"
         - ...
         '''
-
-        return self.query(
-            text,
-            web_search,
-            temperature,
-            top_p,
-            repetition_penalty,
-            top_k,
-            truncate,
-            watermark,
-            max_new_tokens,
-            stop,
-            return_full_text,
-            False,
-            use_cache,
-            is_retry,
-            retry_count,
+        msg = Message(
+            g=self._stream_query(
+                text=text,
+                web_search=web_search,
+                _stream_yield_all=_stream_yield_all, # For stream mode, yield all responses from the server.
+                retry_count=retry_count,
+            ),
+            _stream_yield_all=_stream_yield_all,
+            web_search=web_search
         )
+        return msg
+
+        
+        # return self.query(
+        #     text=text,
+        #     web_search=web_search,
+        #     temperature=temperature,
+        #     top_p=top_p,
+        #     repetition_penalty=repetition_penalty,
+        #     top_k=top_k,
+        #     truncate=truncate,
+        #     watermark=watermark,
+        #     max_new_tokens=max_new_tokens,
+        #     stop=stop,
+        #     return_full_text=return_full_text,
+        #     stream=False,
+        #     _stream_yield_all=
+        #     use_cache=use_cache,
+        #     is_retry=is_retry,
+        #     retry_count=retry_count,
+        # )
 
     def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = "") -> bool:
         headers = {
@@ -668,7 +699,7 @@ class ChatBot:
 
 if __name__ == "__main__":
     bot = ChatBot()
-    message_content = bot.chat("Hello", max_new_tokens=10)
+    message_content = bot.chat("Hello")
     print(message_content)
     # summary = bot.summarize_conversation()
     # print(summary)
