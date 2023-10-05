@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Generator, Union
 
-from src.hugchat.exceptions import ChatError, ModelOverloadedError
+from .exceptions import ChatError, ModelOverloadedError
 
 
 MSGTYPE_FINAL = "finalAnswer"
@@ -53,13 +53,15 @@ class Message(Generator):
     g: Generator
     _stream_yield_all: bool = False
     web_search: bool = False
-    web_search_sources: list[WebSearchSource] = list()
+    web_search_sources: list[WebSearchSource] = field(
+        default_factory=lambda: []
+    )
     final_answer: str = ""
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
     error: Union[Exception, None] = None
 
-    def __next__(self):
+    def __next__(self) -> dict:
         if self.msg_status:
             raise StopIteration
 
@@ -75,7 +77,7 @@ class Message(Generator):
                 self.msg_status = MSGSTATUS_RESOLVED
             elif t == MSGTYPE_WEB:
                 if a.__contains__("sources"):
-                    self.web_search_sources = list()
+                    self.web_search_sources.clear()
                     sources = a["sources"]
                     for source in sources:
                         wss = WebSearchSource()
@@ -98,9 +100,12 @@ class Message(Generator):
             # If _stream_yield_all is True, yield all responses from the server.
             if self._stream_yield_all or t == MSGTYPE_STREAM:
                 return a
+            else:
+                return self.__next__()
         except Exception as e:
             self.error = e
             self.msg_status = MSGSTATUS_REJECTED
+            raise StopIteration
 
     def __iter__(self):
         return self
@@ -116,6 +121,29 @@ class Message(Generator):
     def send(self, __value):
         return self.g.send(__value)
 
+    def get_final_text(self) -> str:
+        """
+        :Return:
+            - self.final_answer
+        """
+        return self.final_answer
+
+
+    def get_search_sources(self) -> list[WebSearchSource]:
+        """
+        :Return:
+            - self.web_search_sources
+        """
+        return self.web_search_sources
+
+    def search_enabled(self) -> bool:
+        """
+        :Return:
+            - self.web_search
+        """
+        return self.web_search
+
+
     def wait_until_done(self) -> str:
         """
         :Return:
@@ -123,16 +151,16 @@ class Message(Generator):
 
         wait until every response is resolved
         """
-        while not self.done():
+        while not self.is_done():
             self.__next__()
-        if self.done() == MSGSTATUS_RESOLVED:
+        if self.is_done() == MSGSTATUS_RESOLVED:
             return self.final_answer
         elif self.error != None:
             raise self.error
         else:
             raise Exception("Rejected but no error captured!")
-
-    def done(self):
+    
+    def is_done(self):
         """
         :Return:
             - self.msg_status
@@ -144,7 +172,7 @@ class Message(Generator):
         """
         return self.msg_status
 
-    def done_search(self):
+    def is_done_search(self):
         """
         :Return:
             - self.web_search_done

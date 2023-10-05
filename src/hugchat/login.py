@@ -6,7 +6,7 @@ import re
 
 
 class Login:
-    def __init__(self, email: str, passwd: str) -> None:
+    def __init__(self, email: str, passwd: str = "") -> None:
         # self.COOKIE_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
         # self.COOKIE_PATH = self.COOKIE_DIR + f"/{email}.json"
         # if not os.path.exists(self.COOKIE_DIR):
