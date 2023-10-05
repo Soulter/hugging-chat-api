@@ -91,13 +91,10 @@ class ChatBot:
         self.conversation_id_list = []
         self.__not_summarize_cids = []
         self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
-        self.llms = [
-                'meta-llama/Llama-2-70b-chat-hf',
-                'codellama/CodeLlama-34b-Instruct-hf', 
-                'tiiuae/falcon-180B-chat',
-                'mistralai/Mistral-7B-Instruct-v0.1'
-        ] # The array is up to date as of October 2, 2023
+
+        self.llms = self.get_remote_llms()
         self.active_model = self.llms[default_llm]
+
         self.current_conversation = self.new_conversation(system_prompt=system_prompt)
 
 
@@ -124,6 +121,7 @@ class ChatBot:
             "Accept-Encoding": "gzip, deflate, br",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
         }
+
         if ref:
             if ref_cid is None:
                 ref_cid = self.current_conversation
@@ -316,6 +314,17 @@ class ChatBot:
         # else:
         #     print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
         #     return False
+
+
+    # Gives information such as name, websiteUrl, description, displayName, parameters, etc.
+    # We can use it in the future if we need to get information about models
+    def get_remote_llms(self) -> list:
+        r = self.session.post(self.hf_base_url + f"/chat/__data.json?x-sveltekit-invalidated=1_", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        data = r.json()["nodes"][0]["data"]
+        modelsIndices = data[data[0]["models"]] 
+
+        return [data[data[index]["name"]] for index in modelsIndices]
 
     def check_operation(self) -> bool:
         r = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1", headers=self.get_headers(ref=True), cookies=self.get_cookies())
