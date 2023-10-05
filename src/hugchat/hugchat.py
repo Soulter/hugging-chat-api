@@ -61,10 +61,10 @@ class ChatBot:
     ) -> None:
         """
         default_llm: 
-        0: `meta-llama/Llama-2-70b-chat-hf`
-        1: `OpenAssistant/oasst-sft-6-llama-30b-xor`
-        2: `codellama/CodeLlama-34b-Instruct-hf`
-        3: `tiiuae/falcon-180B-chat`
+        0: 'meta-llama/Llama-2-70b-chat-hf',
+        1: 'codellama/CodeLlama-34b-Instruct-hf', 
+        2: 'tiiuae/falcon-180B-chat',
+        3: 'mistralai/Mistral-7B-Instruct-v0.1'
         """
         if cookies is None and cookie_path == "":
             raise ChatBotInitError("Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api")
@@ -93,7 +93,8 @@ class ChatBot:
         self.llms = [
                 'meta-llama/Llama-2-70b-chat-hf',
                 'codellama/CodeLlama-34b-Instruct-hf', 
-                'tiiuae/falcon-180B-chat'
+                'tiiuae/falcon-180B-chat',
+                'mistralai/Mistral-7B-Instruct-v0.1'
         ] # The array is up to date as of October 2, 2023
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
