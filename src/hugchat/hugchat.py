@@ -58,6 +58,7 @@ class ChatBot:
         cookies: dict = None,
         cookie_path: str = "",
         default_llm: Union[int, str] = 0,
+        system_prompt: str = ""
     ) -> None:
         """
         default_llm: 
@@ -97,7 +98,7 @@ class ChatBot:
                 'mistralai/Mistral-7B-Instruct-v0.1'
         ] # The array is up to date as of October 2, 2023
         self.active_model = self.llms[default_llm]
-        self.current_conversation = self.new_conversation()
+        self.current_conversation = self.new_conversation(system_prompt=system_prompt)
 
 
     def get_hc_session(self) -> Session:
@@ -162,7 +163,7 @@ class ChatBot:
         
         return True
     
-    def new_conversation(self, system_prompt="", switch_to=False) -> str:
+    def new_conversation(self, system_prompt: str = "", switch_to: bool = False) -> str:
         '''
         Create a new conversation. Return the new conversation id. You should change the conversation by calling change_conversation() after calling this method.
         '''
