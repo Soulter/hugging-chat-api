@@ -98,7 +98,6 @@ class ChatBot:
         ] # The array is up to date as of October 2, 2023
         self.active_model = self.llms[default_llm]
         self.current_conversation = self.new_conversation()
-        self.system_prompts = {}
 
 
     def get_hc_session(self) -> Session:
@@ -163,7 +162,7 @@ class ChatBot:
         
         return True
     
-    def new_conversation(self) -> str:
+    def new_conversation(self, system_prompt="", switch_to=False) -> str:
         '''
         Create a new conversation. Return the new conversation id. You should change the conversation by calling change_conversation() after calling this method.
         '''
@@ -182,12 +181,22 @@ class ChatBot:
         resp = ""
         while True:
             try:
-                resp = self.session.post(self.hf_base_url + "/chat/conversation", json={"model": self.active_model}, headers=_header, cookies = self.get_cookies())
+                resp = self.session.post(
+                    self.hf_base_url + "/chat/conversation",
+                    json={"model": self.active_model, "preprompt": system_prompt},
+                    headers=_header,
+                    cookies = self.get_cookies()
+                )
+                
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
                 self.conversation_id_list.append(cid)
                 self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
                 self.__preserve_context(cid = cid, ending = "1_1")
+
+                if switch_to:
+                    self.change_conversation(cid)
+                
                 return cid
             
             except BaseException as e:
@@ -256,26 +265,6 @@ class ChatBot:
         '''
         settings = {
             "shareConversationsWithModelAuthors": ("", "on" if val else "")
-        }
-
-        self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
-
-    def set_system_prompt(self, prompt: str, llmIndex: int = None):
-        '''
-        Sets a system prompt for the given model index
-        You need to create a new conversation for this to work
-        '''
-
-        if llmIndex is None:
-            llmIndex = self.get_active_llm_index()
-
-        elif llmIndex > len(self.llms)-1 or llmIndex < 0:
-            raise IndexError("Out of range of llm index")
-        
-        self.system_prompts[self.llms[llmIndex]] = prompt
-
-        settings = {
-            "customPrompts": ("", json.dumps(self.system_prompts))
         }
 
         self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
@@ -671,7 +660,5 @@ if __name__ == "__main__":
     bot = ChatBot()
     message_content = bot.chat("Hello", max_new_tokens=10)
     print(message_content)
-    # summary = bot.summarize_conversation()
-    # print(summary)
     sharelink = bot.share_conversation()
     print(sharelink)
