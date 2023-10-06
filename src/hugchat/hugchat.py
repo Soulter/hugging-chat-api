@@ -15,6 +15,15 @@ class WebSearchSource:
     link: str
     hostname: str
 
+class conversation:
+    title: str = None
+    model: str = None
+    id: str = None
+    system_prompt: str = None
+
+    def __str__(self) -> str:
+        return self.id
+
 class QueryResult:
     """
     The result of a non-stream query.
@@ -88,7 +97,7 @@ class ChatBot:
         self.hf_base_url = "https://huggingface.co"
         self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
-        self.conversation_id_list = []
+        self.conversation_list = []
         self.__not_summarize_cids = []
         self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
 
@@ -105,7 +114,7 @@ class ChatBot:
         session.get(self.hf_base_url + "/chat")
         return session
     
-    def get_headers(self, ref=True, ref_cid = None) -> dict:
+    def get_headers(self, ref=True, ref_cid: conversation = None) -> dict:
         _h = {
             "Accept": "*/*",
             "Connection": "keep-alive",
@@ -140,7 +149,7 @@ class ChatBot:
     #
     # Returns a pointer to this objects list that contains id of conversations.
     def get_conversation_list(self) -> list:
-        return list(self.conversation_id_list)
+        return list(self.conversation_list)
     
     def get_active_llm_index(self) -> int:
         return self.llms.index(self.active_model)
@@ -163,7 +172,7 @@ class ChatBot:
     
     def new_conversation(self, system_prompt: str = "", switch_to: bool = False) -> str:
         '''
-        Create a new conversation. Return the new conversation id. You should change the conversation by calling change_conversation() after calling this method.
+        Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
         '''
         err_count = 0
 
@@ -189,14 +198,20 @@ class ChatBot:
                 
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
-                self.conversation_id_list.append(cid)
+
+                c = conversation()
+                c.id = cid
+                c.system_prompt = system_prompt
+                c.model = self.active_model
+
+                self.conversation_list.append(c)
                 self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
                 self.__preserve_context(cid = cid, ending = "1_1")
 
                 if switch_to:
-                    self.change_conversation(cid)
+                    self.change_conversation(c)
                 
-                return cid
+                return c
             
             except BaseException as e:
                 err_count += 1
@@ -205,25 +220,26 @@ class ChatBot:
                     raise CreateConversationError(f"Failed to create new conversation with status code: {resp.status_code}. ({err_count})")
                 continue
     
-    def change_conversation(self, conversation_id: str) -> bool:
+    def change_conversation(self, conversation_object: conversation) -> bool:
         '''
         Change the current conversation to another one. Need a valid conversation id.
         '''
-        if conversation_id not in self.conversation_id_list:
+
+        if conversation_object not in self.conversation_list:
             raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
-        self.current_conversation = conversation_id
+        self.current_conversation = conversation_object
         return True
     
-    def share_conversation(self, conversation_id: str = None) -> str:
+    def share_conversation(self, conversation_object: conversation = None) -> str:
         '''
         Return a share link of the conversation.
         '''
-        if conversation_id is None:
-            conversation_id = self.current_conversation
+        if conversation_object is None:
+            conversation_object = self.current_conversation
 
         headers = self.get_headers()
         
-        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_id}/share", headers=headers, cookies=self.get_cookies())
+        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_object}/share", headers=headers, cookies=self.get_cookies())
         
         if r.status_code != 200:
             raise Exception(f"Failed to share conversation with status code: {r.status_code}")
@@ -234,22 +250,22 @@ class ChatBot:
 
         raise Exception(f"Unknown server response: {response}")
 
-    def delete_conversation(self, conversation_id: str = None) -> bool:
+    def delete_conversation(self, conversation_object: conversation = None) -> bool:
         '''
         Delete a HuggingChat conversation by conversation_id.
         '''
 
-        if conversation_id is None:
-            conversation_id = self.current_conversation
+        if conversation_object is None:
+            conversation_object = self.current_conversation
 
         headers = self.get_headers()
 
-        r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_id}", headers=headers, cookies=self.get_cookies())
+        r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_object}", headers=headers, cookies=self.get_cookies())
 
         if r.status_code != 200:
             raise DeleteConversationError(f"Failed to delete conversation with status code: {r.status_code}")
         else:
-            self.conversation_id_list.pop(self.conversation_id_list.index(conversation_id))
+            self.conversation_list.pop(self.conversation_list.index(conversation_object))
             
     def get_available_llm_models(self) -> list:
         '''
@@ -266,7 +282,10 @@ class ChatBot:
             "shareConversationsWithModelAuthors": ("", "on" if val else "")
         }
 
-        self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
+        r = self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to set share conversation with status code: {r.status_code}")
 
     def switch_llm(self, index: int) -> bool:
         '''
@@ -319,12 +338,43 @@ class ChatBot:
     # Gives information such as name, websiteUrl, description, displayName, parameters, etc.
     # We can use it in the future if we need to get information about models
     def get_remote_llms(self) -> list:
-        r = self.session.post(self.hf_base_url + f"/chat/__data.json?x-sveltekit-invalidated=1_", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+        '''
+        Fetches all possible LLMs that could be used
+        '''
+        
+        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get remote LLMs with status code: {r.status_code}")
 
         data = r.json()["nodes"][0]["data"]
         modelsIndices = data[data[0]["models"]] 
 
         return [data[data[index]["name"]] for index in modelsIndices]
+
+    def get_conversation_from_id(self, conversation_id: str) -> conversation:
+        '''
+        Return a conversation object from the given conversation_id
+        '''
+
+        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
+
+        data = r.json()["nodes"][0]["data"]
+        conversationIndices = data[data[0]["conversations"]]
+
+        for index in conversationIndices:
+            conversation_data = data[index]
+            if data[conversation_data["id"]] == conversation_id:
+                c = conversation()
+                c.id = conversation_id
+                c.title = data[conversation_data["title"]]
+                c.model = data[conversation_data["model"]]
+                # unable to get system_prompt from returned data after first glance
+
+                return c
 
     def check_operation(self) -> bool:
         r = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1", headers=self.get_headers(ref=True), cookies=self.get_cookies())
