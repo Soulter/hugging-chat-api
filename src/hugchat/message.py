@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Generator, Union
 
 from .exceptions import ChatError, ModelOverloadedError
+import json
 
 
 MSGTYPE_FINAL = "finalAnswer"
@@ -19,6 +20,13 @@ class WebSearchSource:
     link: str
     hostname: str
 
+    def __str__(self):
+        return json.dumps({
+            "title": self.title,
+            "link": self.link,
+            "hostname": self.hostname,
+        })
+
 
 @dataclass
 class Message(Generator):
@@ -28,7 +36,7 @@ class Message(Generator):
         * _stream_yield_all: bool = False
         * web_search: bool = False
         - web_search_sources: list[WebSearchSource] = list()
-        - final_answer: str = ""
+        - text: str = "" 
         - web_search_done: bool = not web_search
         - msg_status: int = MSGSTATUS_PENDING
         - error: Union[Exception, None] = None
@@ -56,7 +64,7 @@ class Message(Generator):
     web_search_sources: list[WebSearchSource] = field(
         default_factory=lambda: []
     )
-    final_answer: str = ""
+    text: str = "" # For backward compatibility, we have to reserve the `text` field.
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
     error: Union[Exception, None] = None
@@ -73,7 +81,7 @@ class Message(Generator):
             elif t == MSGTYPE_STATUS:
                 pass
             elif t == MSGTYPE_FINAL:
-                self.final_answer = a["text"]
+                self.text = a["text"]
                 self.msg_status = MSGSTATUS_RESOLVED
             elif t == MSGTYPE_WEB:
                 if a.__contains__("sources"):
@@ -102,7 +110,11 @@ class Message(Generator):
                 return a
             else:
                 return self.__next__()
+        except StopIteration as e:
+            # print("meet stop:", self.msg_status)
+            pass
         except Exception as e:
+            print("meet error: ", str(e))
             self.error = e
             self.msg_status = MSGSTATUS_REJECTED
             raise StopIteration
@@ -124,9 +136,9 @@ class Message(Generator):
     def get_final_text(self) -> str:
         """
         :Return:
-            - self.final_answer
+            - self.text
         """
-        return self.final_answer
+        return self.text
 
 
     def get_search_sources(self) -> list[WebSearchSource]:
@@ -143,18 +155,17 @@ class Message(Generator):
         """
         return self.web_search
 
-
     def wait_until_done(self) -> str:
         """
         :Return:
-            - self.final_answer if resolved else raise error
+            - self.text if resolved else raise error
 
         wait until every response is resolved
         """
         while not self.is_done():
             self.__next__()
         if self.is_done() == MSGSTATUS_RESOLVED:
-            return self.final_answer
+            return self.text
         elif self.error != None:
             raise self.error
         else:
@@ -181,6 +192,36 @@ class Message(Generator):
         """
         return self.web_search_done
 
+    """
+    For backward compatibility, we have to add these functions:
+    """
+
+    def __str__(self):
+        return self.wait_until_done()
+
+    def __getitem__(self, key: str) -> str:
+        print("_getitem_")
+        self.wait_until_done()
+        print("done")
+        if key == "text":
+            return self.text
+        elif key == "web_search":
+            return self.web_search
+        elif key == "web_search_sources":
+            return self.web_search_sources
+
+    def __add__(self, other: str) -> str:
+        self.wait_until_done()
+        return self.text + other
+    
+    def __radd__(self, other: str) -> str:
+        self.wait_until_done()
+        return other + self.text
+    
+    def __iadd__(self, other: str) -> str:
+        self.wait_until_done()
+        self.text += other
+        return self.text
 
 if __name__ == "__main__":
     pass

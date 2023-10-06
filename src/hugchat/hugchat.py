@@ -192,10 +192,10 @@ class ChatBot:
         """
         Change the current conversation to another one. Need a valid conversation id.
         """
-        if conversation_id not in self.conversation_id_list:
-            raise InvalidConversationIDError(
-                "Invalid conversation id, not in conversation list."
-            )
+        # if conversation_id not in self.conversation_id_list:
+        #     raise InvalidConversationIDError(
+        #         "Invalid conversation id, not in conversation list."
+        #     )
         self.current_conversation = conversation_id
         return True
 
