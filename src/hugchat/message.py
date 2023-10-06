@@ -114,7 +114,7 @@ class Message(Generator):
             # print("meet stop:", self.msg_status)
             pass
         except Exception as e:
-            print("meet error: ", str(e))
+            # print("meet error: ", str(e))
             self.error = e
             self.msg_status = MSGSTATUS_REJECTED
             raise StopIteration
