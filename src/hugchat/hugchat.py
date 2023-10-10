@@ -8,12 +8,10 @@ import typing
 import traceback
 from typing import Union
 
-from .exceptions import *
+from requests.sessions import RequestsCookieJar
 
-class WebSearchSource:
-    title: str
-    link: str
-    hostname: str
+from .message import Message
+from .exceptions import *
 
 class conversation:
     title: str = None
@@ -24,38 +22,7 @@ class conversation:
     def __str__(self) -> str:
         return self.id
 
-class QueryResult:
-    """
-    The result of a non-stream query.
-    """
-    text: str
-    web_search: bool
-    web_search_sources: list[WebSearchSource]
-
-    def __str__(self) -> str:
-        return self.text
-
-    def __add__(self, other: str) -> str:
-        return self.text + other
-    
-    def __radd__(self, other: str) -> str:
-        return other + self.text
-    
-    def __iadd__(self, other: str) -> str:
-        self.text += other
-        return self.text
-
-    def __getitem__(self, key: str) -> str:
-        if key == "text":
-            return self.text
-        elif key == "web_search":
-            return self.web_search
-        elif key == "web_search_sources":
-            return self.web_search_sources
-
-
 class ChatBot:
-    
     cookies: dict
     """Cookies for authentication"""
 
@@ -64,7 +31,7 @@ class ChatBot:
 
     def __init__(
         self,
-        cookies: dict = None,
+        cookies: Union[dict, None, RequestsCookieJar] = None,
         cookie_path: str = "",
         default_llm: Union[int, str] = 0,
         system_prompt: str = ""
@@ -77,15 +44,19 @@ class ChatBot:
         3: 'mistralai/Mistral-7B-Instruct-v0.1'
         """
         if cookies is None and cookie_path == "":
-            raise ChatBotInitError("Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api")
+            raise ChatBotInitError(
+                "Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api"
+            )
         elif cookies is not None and cookie_path != "":
             raise ChatBotInitError("Both cookies and cookie_path provided")
-        
+
         if cookies is None and cookie_path != "":
             # read cookies from path
             if not os.path.exists(cookie_path):
-                raise ChatBotInitError(f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api")
-            with open(cookie_path, "r", encoding='utf-8') as f:
+                raise ChatBotInitError(
+                    f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api"
+                )
+            with open(cookie_path, "r", encoding="utf-8") as f:
                 cookies = json.load(f)
 
         # convert cookies to KV format
@@ -106,14 +77,13 @@ class ChatBot:
 
         self.current_conversation = self.new_conversation(system_prompt=system_prompt)
 
-
     def get_hc_session(self) -> Session:
         session = Session()
         # set cookies
         session.cookies.update(self.cookies)
         session.get(self.hf_base_url + "/chat")
         return session
-    
+
     def get_headers(self, ref=True, ref_cid: conversation = None) -> dict:
         _h = {
             "Accept": "*/*",
@@ -123,7 +93,7 @@ class ChatBot:
             "Sec-Fetch-Site": "same-origin",
             "Content-Type": "application/json",
             "Sec-Ch-Ua-Platform": "Windows",
-            "Sec-Ch-Ua": "Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Microsoft Edge\";v=\"116",
+            "Sec-Ch-Ua": 'Chromium";v="116", "Not)A;Brand";v="24", "Microsoft Edge";v="116',
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Dest": "empty",
@@ -136,10 +106,9 @@ class ChatBot:
                 ref_cid = self.current_conversation
             _h["Referer"] = f"https://huggingface.co/chat/conversation/{ref_cid}"
         return _h
-    
+
     def get_cookies(self) -> dict:
         return self.session.cookies.get_dict()
-    
 
     # NOTE: To create a copy when calling this, call it inside of list().
     #       If not, when updating or altering the values in the variable will
@@ -153,23 +122,32 @@ class ChatBot:
     
     def get_active_llm_index(self) -> int:
         return self.llms.index(self.active_model)
-    
+
     def accept_ethics_modal(self):
-        '''
+        """
         [Deprecated Method]
-        '''
-        response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=False), cookies=self.get_cookies(), allow_redirects=True, data={
-            "ethicsModalAccepted": "true",
-            "shareConversationsWithModelAuthors": "true",
-            "ethicsModalAcceptedAt": "",
-            "activeModel": str(self.active_model)
-        })
+        """
+        response = self.session.post(
+            self.hf_base_url + "/chat/settings",
+            headers=self.get_headers(ref=False),
+            cookies=self.get_cookies(),
+            allow_redirects=True,
+            data={
+                "ethicsModalAccepted": "true",
+                "shareConversationsWithModelAuthors": "true",
+                "ethicsModalAcceptedAt": "",
+                "activeModel": str(self.active_model),
+            },
+        )
 
         if response.status_code != 200:
-            raise Exception(f"Failed to accept ethics modal with status code: {response.status_code}. {response.content.decode()}")
-        
+            raise Exception(
+                f"Failed to accept ethics modal with status code: {response.status_code}. {response.content.decode()}"
+            )
+
         return True
-    
+      
+      
     def new_conversation(self, system_prompt: str = "", switch_to: bool = False) -> str:
         '''
         Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
@@ -183,8 +161,8 @@ class ChatBot:
 
         # Create new conversation and get a conversation id.
 
-        _header = self.get_headers(ref = False)
-        _header['Referer'] = "https://huggingface.co/chat"
+        _header = self.get_headers(ref=False)
+        _header["Referer"] = "https://huggingface.co/chat"
 
         resp = ""
         while True:
@@ -212,14 +190,18 @@ class ChatBot:
                     self.change_conversation(c)
                 
                 return c
-            
+
             except BaseException as e:
                 err_count += 1
-                logging.debug(f" Failed to create new conversation. Retrying... ({err_count})")
+                logging.debug(
+                    f" Failed to create new conversation. Retrying... ({err_count})"
+                )
                 if err_count > 5:
-                    raise CreateConversationError(f"Failed to create new conversation with status code: {resp.status_code}. ({err_count})")
+                    raise CreateConversationError(
+                        f"Failed to create new conversation with status code: {resp.status_code}. ({err_count})"
+                    )
                 continue
-    
+
     def change_conversation(self, conversation_object: conversation) -> bool:
         '''
         Change the current conversation to another one. Need a valid conversation id.
@@ -242,18 +224,20 @@ class ChatBot:
         r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_object}/share", headers=headers, cookies=self.get_cookies())
         
         if r.status_code != 200:
-            raise Exception(f"Failed to share conversation with status code: {r.status_code}")
-        
+            raise Exception(
+                f"Failed to share conversation with status code: {r.status_code}"
+            )
+
         response = r.json()
-        if 'url' in response:
-            return response['url']
+        if "url" in response:
+            return response["url"]
 
         raise Exception(f"Unknown server response: {response}")
 
     def delete_conversation(self, conversation_object: conversation = None) -> bool:
-        '''
+        """
         Delete a HuggingChat conversation by conversation_id.
-        '''
+        """
 
         if conversation_object is None:
             conversation_object = self.current_conversation
@@ -263,21 +247,23 @@ class ChatBot:
         r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_object}", headers=headers, cookies=self.get_cookies())
 
         if r.status_code != 200:
-            raise DeleteConversationError(f"Failed to delete conversation with status code: {r.status_code}")
+            raise DeleteConversationError(
+                f"Failed to delete conversation with status code: {r.status_code}"
+            )
         else:
             self.conversation_list.pop(self.conversation_list.index(conversation_object))
             
     def get_available_llm_models(self) -> list:
-        '''
+        """
         Get all available models that exists in huggingface.co/chat.
         Returns a hard-code array.
-        '''
+        """
         return self.llms
 
     def set_share_conversations(self, val: bool = True):
-        '''
+        """
         Sets the "Share Conversation with Model Authors setting" to the given val variable
-        '''
+        """
         settings = {
             "shareConversationsWithModelAuthors": ("", "on" if val else "")
         }
@@ -288,7 +274,7 @@ class ChatBot:
             raise Exception(f"Failed to set share conversation with status code: {r.status_code}")
 
     def switch_llm(self, index: int) -> bool:
-        '''
+        """
         Attempts to change current conversation's Large Language Model.
         Requires an index to indicate the model you want to switch.
         See self.llms for available models.
@@ -298,9 +284,9 @@ class ChatBot:
 
         2. Only works *after creating a new conversation.*
         :)
-        '''
+        """
         # TODO: I will work on making it have a model for each conversation that is changeable. - @Zekaroni
-        
+
         if index < len(self.llms) and index >= 0:
             self.active_model = self.llms[index]
             return True
@@ -377,28 +363,32 @@ class ChatBot:
                 return c
 
     def check_operation(self) -> bool:
-        r = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1", headers=self.get_headers(ref=True), cookies=self.get_cookies())
+        r = self.session.post(
+            self.hf_base_url
+            + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1",
+            headers=self.get_headers(ref=True),
+            cookies=self.get_cookies(),
+        )
         return r.status_code == 200
 
     def _stream_query(
         self,
         text: str,
-        web_search: bool=False,
-        temperature: float=0.1,
-        top_p: float=0.95,
-        repetition_penalty: float=1.2,
-        top_k: int=50,
-        truncate: int=1000,
-        watermark: bool=False,
-        max_new_tokens: int=1024,
-        stop: list=["</s>"],
-        return_full_text: bool=False,
-        use_cache: bool=False,
-        is_retry: bool=False,
-        retry_count: int=5,
-        _stream_yield_all: bool=False, # yield all responses from the server.
+        web_search: bool = False,
+        temperature: float = 0.1,
+        top_p: float = 0.95,
+        repetition_penalty: float = 1.2,
+        top_k: int = 50,
+        truncate: int = 1000,
+        watermark: bool = False,
+        max_new_tokens: int = 1024,
+        stop: list = ["</s>"],
+        return_full_text: bool = False,
+        use_cache: bool = False,
+        is_retry: bool = False,
+        retry_count: int = 5,
+        _stream_yield_all: bool = False,  # yield all responses from the server.
     ) -> typing.Generator[dict, None, None]:
-        
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
         if self.current_conversation == "":
@@ -421,9 +411,9 @@ class ChatBot:
                 "stream": True,
             },
             "options": {
-                    "use_cache": use_cache,
-                    "is_retry": is_retry,
-                    "id": str(uuid.uuid4()),
+                "use_cache": use_cache,
+                "is_retry": is_retry,
+                "id": str(uuid.uuid4()),
             },
             "stream": True,
             "web_search": web_search,
@@ -439,268 +429,145 @@ class ChatBot:
             "Accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
         }
         last_obj = {}
-        
+
         break_label = False
 
         while retry_count > 0:
-            resp = self.session.post(self.hf_base_url + f"/chat/conversation/{self.current_conversation}", json=req_json, stream=True, headers=headers, cookies=self.session.cookies.get_dict())
+            resp = self.session.post(
+                self.hf_base_url + f"/chat/conversation/{self.current_conversation}",
+                json=req_json,
+                stream=True,
+                headers=headers,
+                cookies=self.session.cookies.get_dict(),
+            )
 
             if resp.status_code != 200:
                 retry_count -= 1
                 if retry_count <= 0:
                     raise ChatError(f"Failed to chat. ({resp.status_code})")
-            
+
             try:
                 for line in resp.iter_lines(decode_unicode=True):
                     if not line:
                         continue
                     res = line
                     obj = json.loads(res)
-                    _type = obj['type']
+                    _type = obj["type"]
 
-                    if _stream_yield_all:
-                        if _type == "finalAnswer":
-                            last_obj = obj
-                            break_label = True
-                            break
-                        yield obj
-                    else:
-                        if _type == "status":
-                            continue
-                        elif _type == "stream":
-                            yield obj
-                        elif _type == "finalAnswer":
-                            last_obj = obj
-                            break_label = True
-                            break
-                        elif _type == "webSearch":
-                            continue
-                        elif "error" in obj:
-                            raise ChatError(obj["error"])
-                        else:
-                            raise ChatError(obj)
+                    if _type == "finalAnswer":
+                        last_obj = obj
+                        break_label = True
+                        break
+                    yield obj
+                    # if _stream_yield_all:
+                    # else:
+                    #     if _type == "status":
+                    #         continue
+                    #     elif _type == "stream":
+                    #         yield obj
+                    #     elif _type == "finalAnswer":
+                    #         last_obj = obj
+                    #         break_label = True
+                    #         break
+                    #     elif _type == "webSearch":
+                    #         continue
+                    #     elif "error" in obj:
+                    #         raise ChatError(obj["error"])
+                    #     else:
+                    #         raise ChatError(obj)
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
                 traceback.print_exc()
                 if "Model is overloaded" in str(e):
-                    raise ModelOverloadedError("Model is overloaded, please try again later or switch to another model.")
+                    raise ModelOverloadedError(
+                        "Model is overloaded, please try again later or switch to another model."
+                    )
                 raise ChatError(f"Failed to parse response: {res}")
             if break_label:
                 break
-        
+
         try:
             # if self.current_conversation in self.__not_summarize_cids:
             #     self.summarize_conversation()
             #     self.__not_summarize_cids.remove(self.current_conversation)
-            self.__preserve_context(ref_cid = self.current_conversation)
+            self.__preserve_context(ref_cid=self.current_conversation)
         except:
             pass
-        
+
         yield last_obj
 
-    def _stream_query_filter(
-        self,
-        *args,
-        **kwargs,
-    ) -> typing.Generator[dict, None, None]:
-        for resp in self._stream_query(*args, **kwargs):
-            if '_stream_yield_all' in kwargs and kwargs['_stream_yield_all']:
-                # If _stream_yield_all is True, yield all responses from the server.
-                yield resp
-            else:
-                if resp['type'] == "stream":
-                    yield resp
-
-    def _non_stream_query(
-        self,
-        text: str,
-        web_search: bool=False,
-        temperature: float=0.1,
-        top_p: float=0.95,
-        repetition_penalty: float=1.2,
-        top_k: int=50,
-        truncate: int=1000,
-        watermark: bool=False,
-        max_new_tokens: int=1024,
-        stop: list=["</s>"],
-        return_full_text: bool=False,
-        use_cache: bool=False,
-        is_retry: bool=False,
-        retry_count: int=5,
-    ) -> QueryResult:
-        query_result = QueryResult()
-        ws = []
-        sources = []
-        for resp in self._stream_query(
-            text,
-            web_search,
-            temperature,
-            top_p,
-            repetition_penalty,
-            top_k,
-            truncate,
-            watermark,
-            max_new_tokens,
-            stop,
-            return_full_text,
-            use_cache,
-            is_retry,
-            retry_count,
-            _stream_yield_all=True,
-        ): 
-            if resp['type'] == "webSearch" and "messageType" in resp and resp["messageType"] == "sources":
-                sources = resp['sources']
-
-            if resp['type'] == "finalAnswer":
-                query_result.text = resp['text']
-                query_result.web_search = web_search
-                query_result.web_search_sources = ws
-                for source in sources:
-                    wss = WebSearchSource()
-                    wss.title = source['title']
-                    wss.link = source['link']
-                    wss.hostname = source['hostname']
-                    ws.append(wss)
-            
-        return query_result
-    
     def query(
         self,
         text: str,
-        web_search: bool=False,
-        temperature: float=0.1,
-        top_p: float=0.95,
-        repetition_penalty: float=1.2,
-        top_k: int=50,
-        truncate: int=1000,
-        watermark: bool=False,
-        max_new_tokens: int=1024,
-        stop: list=["</s>"],
-        return_full_text: bool=False,
-        stream: bool=False,
-        _stream_yield_all: bool=False, # For stream mode, yield all responses from the server.
-        use_cache: bool=False,
-        is_retry: bool=False,
-        retry_count: int=5,
-    ) -> typing.Union[typing.Generator[dict, None, None], QueryResult]:
-
+        web_search: bool = False,
+        temperature: float = 0.1,
+        top_p: float = 0.95,
+        repetition_penalty: float = 1.2,
+        top_k: int = 50,
+        truncate: int = 1000,
+        watermark: bool = False,
+        max_new_tokens: int = 1024,
+        stop: list = ["</s>"],
+        return_full_text: bool = False,
+        stream: bool = False,
+        _stream_yield_all: bool = False,  # For stream mode, yield all responses from the server.
+        use_cache: bool = False,
+        is_retry: bool = False,
+        retry_count: int = 5,
+    ) -> Message:
         """
-        Send a message to the current conversation. Return the response text.
-        You can customize these optional parameters.
-        You can turn on the web search by set the parameter `web_search` to True
-        When the `stream` is True, it will return a generator that yields the response from the server.
-        When the `stream` is False, it will return a QueryResult object.
-
-        About the QueryResult object:
-        - `text`: The response text.
-        - `web_search`: Whether the response contains web search results.
-        - `web_search_sources`: The web search results. It is a list of WebSearchSource objects.
-
-        You can:
-        - query_result.text
-        - query_result["text"]
-        - query_result.text + "a string"
-        - query_result.text += "a string"
-        - ...
+        **Deprecated**
+        Same as chat now
         """
-
-        if stream:
-            return self._stream_query_filter(
-                text,
-                web_search,
-                temperature,
-                top_p,
-                repetition_penalty,
-                top_k,
-                truncate,
-                watermark,
-                max_new_tokens,
-                stop,
-                return_full_text,
-                use_cache,
-                is_retry,
-                retry_count,
-                _stream_yield_all = _stream_yield_all,
-            )
-        else:
-            return self._non_stream_query(
-                text,
-                web_search,
-                temperature,
-                top_p,
-                repetition_penalty,
-                top_k,
-                truncate,
-                watermark,
-                max_new_tokens,
-                stop,
-                return_full_text,
-                use_cache,
-                is_retry,
-                retry_count,
-            )
+        return self.chat(
+            text=text,
+            web_search=web_search,
+            _stream_yield_all=_stream_yield_all,
+            retry_count=retry_count,
+        )
 
     def chat(
         self,
         text: str,
-        web_search: bool=False,
-        temperature: float=0.1,
-        top_p: float=0.95,
-        repetition_penalty: float=1.2,
-        top_k: int=50,
-        truncate: int=1000,
-        watermark: bool=False,
-        max_new_tokens: int=1024,
-        stop: list=["</s>"],
-        return_full_text: bool=False,
-        stream: bool=False,  # make no sense
-        use_cache: bool=False,
-        is_retry: bool=False,
-        retry_count: int=5,
-    ) -> QueryResult:
-        '''
-        Send a message to the current conversation. Return the response text.
-        You can customize these optional parameters.
+        web_search: bool = False,
+        _stream_yield_all: bool = False,  # For stream mode, yield all responses from the server.
+        retry_count: int = 5,
+        *args,
+        **kvargs,
+    ) -> Message:
+        """
+        Send a message to the current conversation. Return a Message object.
+        You can customize these optional parameters (**Deprecated**).
         You can turn on the web search by set the parameter `web_search` to True
 
-        If you want to stream the response, use the `query` method instead and set it `stream` parameter to `True`.
+        Stream is now the default mode, you can call Message.wait_until_done()
 
-        About the QueryResult object:
-        - `text`: The response text.
-        - `web_search`: Whether the response contains web search results.
-        - `web_search_sources`: The web search results. It is a list of WebSearchSource objects.
+        About class `Message`:
+        - `wait_until_done()`: Block until the response done processing or an error raised.
+        - `__iter__()`: For loop call this Generator and get response.
+        - `get_search_sources()`: The web search results. It is a list of WebSearchSource objects.
 
-        You can:
-        - query_result.text
-        - query_result["text"]
-        - query_result.text + "a string"
-        - query_result.text += "a string"
-        - ...
-        '''
-
-        return self.query(
-            text,
-            web_search,
-            temperature,
-            top_p,
-            repetition_penalty,
-            top_k,
-            truncate,
-            watermark,
-            max_new_tokens,
-            stop,
-            return_full_text,
-            False,
-            use_cache,
-            is_retry,
-            retry_count,
+        For more detail please see Message documentation(Message.__doc__)
+        """
+        msg = Message(
+            g=self._stream_query(
+                text=text,
+                web_search=web_search,
+                _stream_yield_all=_stream_yield_all,  # For stream mode, yield all responses from the server.
+                retry_count=retry_count,
+            ),
+            _stream_yield_all=_stream_yield_all,
+            web_search=web_search,
         )
+        return msg
 
-    def __preserve_context(self, cid: str = None, ending: str = "1_", ref_cid: str = "") -> bool:
+    def __preserve_context(
+        self, cid: str = None, ending: str = "1_", ref_cid: str = ""
+    ) -> bool:
         headers = {
-            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203",
-            'Accept': "*/*",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203",
+            "Accept": "*/*",
         }
         if ref_cid == "":
             headers["Referer"] = "https://huggingface.co/chat"
@@ -708,17 +575,18 @@ class ChatBot:
             headers["Referer"] = f"https://huggingface.co/chat/conversation/{ref_cid}"
         # print(headers)
         cookie = {
-            'hf-chat': self.get_cookies()['hf-chat'],
+            "hf-chat": self.get_cookies()["hf-chat"],
         }
         if cid is None:
             cid = self.current_conversation
         url = f"https://huggingface.co/chat/conversation/{cid}/__data.json?x-sveltekit-invalidated={ending}"
-        response = self.session.get(url, cookies = cookie, headers = headers, data = {})
+        response = self.session.get(url, cookies=cookie, headers=headers, data={})
         return response.status_code == 200
+
 
 if __name__ == "__main__":
     bot = ChatBot()
-    message_content = bot.chat("Hello", max_new_tokens=10)
+    message_content = bot.chat("Hello")
     print(message_content)
     sharelink = bot.share_conversation()
     print(sharelink)
