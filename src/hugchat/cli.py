@@ -57,7 +57,8 @@ def cli():
         if not email:
             email = EMAIL
         try:
-            cookies = Login(email, None).loadCookiesFromDir()
+            if email:
+                cookies = Login(email).loadCookiesFromDir()
         except Exception as e:
             pass
     if not cookies or inputpass:
@@ -260,29 +261,48 @@ def cli():
         
         else:
             try:
-                if not streamoutput:
-                    res = chatbot.chat(question)
-                    print("< " + res)
-                else:
+                res = chatbot.chat(question, stream=True, _stream_yield_all=True, web_search=is_web_search)
+                print("<", end="", flush=True)
 
-                    res = chatbot.query(question, stream=True, _stream_yield_all=True, web_search=is_web_search)
-                    print("<", end="", flush=True)
+                sources = []
+                for chunk in res:
+                    if web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'update':
+                        args = chunk['args'][0] if 'args' in chunk else ""
+                        print(f"🌍 Web Searching | {chunk['message']} {args}")
+                    elif web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'sources' and "sources" in chunk:
+                        sources = chunk['sources']
+                    elif chunk['type'] == 'stream':
+                        print(chunk['token'], end="", flush=True)
 
-                    sources = []
-                    for chunk in res:
-                        if web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'update':
-                            args = chunk['args'][0] if 'args' in chunk else ""
-                            print(f"🌍 Web Searching | {chunk['message']} {args}")
-                        elif web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'sources' and "sources" in chunk:
-                            sources = chunk['sources']
-                        elif chunk['type'] == 'stream':
-                            print(chunk['token'], end="", flush=True)
+                if web_search_hint and len(sources) > 0:
+                    print(f"\nSources:")
+                    for i in range(len(sources)):
+                        print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
+                print()
 
-                    if web_search_hint and len(sources) > 0:
-                        print(f"\nSources:")
-                        for i in range(len(sources)):
-                            print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
-                    print()
+                # if not streamoutput:
+                #     res = chatbot.chat(question)
+                #     print("< " + res)
+                # else:
+                #
+                #     res = chatbot.query(question, stream=True, _stream_yield_all=True, web_search=is_web_search)
+                #     print("<", end="", flush=True)
+                #
+                #     sources = []
+                #     for chunk in res:
+                #         if web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'update':
+                #             args = chunk['args'][0] if 'args' in chunk else ""
+                #             print(f"🌍 Web Searching | {chunk['message']} {args}")
+                #         elif web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'sources' and "sources" in chunk:
+                #             sources = chunk['sources']
+                #         elif chunk['type'] == 'stream':
+                #             print(chunk['token'], end="", flush=True)
+                #
+                #     if web_search_hint and len(sources) > 0:
+                #         print(f"\nSources:")
+                #         for i in range(len(sources)):
+                #             print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
+                #     print()
             except Exception as e:
                 print(traceback.format_exc())
                 print(f"[Error] {str(e)}")
