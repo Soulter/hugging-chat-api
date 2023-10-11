@@ -73,9 +73,12 @@ chatbot.change_conversation(id)
 # Get conversation list
 conversation_list = chatbot.get_conversation_list()
 
-# Switch model (default: meta-llama/Llama-2-70b-chat-hf. )
-chatbot.switch_llm(0) # Switch to `OpenAssistant/oasst-sft-6-llama-30b-xor`
-chatbot.switch_llm(1) # Switch to `meta-llama/Llama-2-70b-chat-hf`
+# Get the available models
+models = chatbot.get_available_llm_models()
+
+# Switch model to the given index
+chatbot.switch_llm(0) # Switch to the first model
+chatbot.switch_llm(1) # Switch to the second model
 ```
 
 The `query()` function receives these parameters:
