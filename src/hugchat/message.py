@@ -103,7 +103,7 @@ class Message(Generator):
                     self.error = ChatError(a["error"])
                     self.msg_status = MSGSTATUS_REJECTED
                 else:
-                    self.error = ChatError(f"Unknow json response: {a}")
+                    self.error = ChatError(f"Unknown json response: {a}")
 
             # If _stream_yield_all is True, yield all responses from the server.
             if self._stream_yield_all or t == MSGTYPE_STREAM:

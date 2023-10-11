@@ -37,11 +37,7 @@ class ChatBot:
         system_prompt: str = ""
     ) -> None:
         """
-        default_llm: 
-        0: 'meta-llama/Llama-2-70b-chat-hf',
-        1: 'codellama/CodeLlama-34b-Instruct-hf', 
-        2: 'tiiuae/falcon-180B-chat',
-        3: 'mistralai/Mistral-7B-Instruct-v0.1'
+        Returns a ChatBot object
         """
         if cookies is None and cookie_path == "":
             raise ChatBotInitError(
@@ -73,7 +69,14 @@ class ChatBot:
         self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
 
         self.llms = self.get_remote_llms()
-        self.active_model = self.llms[default_llm]
+
+        if type(default_llm) == str:
+            if default_llm in self.llms:
+                self.active_model = default_llm
+            else:
+                raise Exception(f"Given model is not in llms list. LLM list: {self.llms}")
+        else:
+            self.active_model = self.llms[default_llm]
 
         self.current_conversation = self.new_conversation(system_prompt=system_prompt)
 
@@ -256,7 +259,6 @@ class ChatBot:
     def get_available_llm_models(self) -> list:
         """
         Get all available models that exists in huggingface.co/chat.
-        Returns a hard-code array.
         """
         return self.llms
 
