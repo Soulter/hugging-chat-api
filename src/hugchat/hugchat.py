@@ -11,9 +11,16 @@ from typing import Union
 from requests.sessions import RequestsCookieJar
 
 from .message import Message
-
 from .exceptions import *
 
+class conversation:
+    title: str = None
+    model: str = None
+    id: str = None
+    system_prompt: str = None
+
+    def __str__(self) -> str:
+        return self.id
 
 class ChatBot:
     cookies: dict
@@ -27,13 +34,14 @@ class ChatBot:
         cookies: Union[dict, None, RequestsCookieJar] = None,
         cookie_path: str = "",
         default_llm: Union[int, str] = 0,
+        system_prompt: str = ""
     ) -> None:
         """
-        default_llm:
-        0: `meta-llama/Llama-2-70b-chat-hf`
-        1: `OpenAssistant/oasst-sft-6-llama-30b-xor`
-        2: `codellama/CodeLlama-34b-Instruct-hf`
-        3: `tiiuae/falcon-180B-chat`
+        default_llm: 
+        0: 'meta-llama/Llama-2-70b-chat-hf',
+        1: 'codellama/CodeLlama-34b-Instruct-hf', 
+        2: 'tiiuae/falcon-180B-chat',
+        3: 'mistralai/Mistral-7B-Instruct-v0.1'
         """
         if cookies is None and cookie_path == "":
             raise ChatBotInitError(
@@ -60,19 +68,14 @@ class ChatBot:
         self.hf_base_url = "https://huggingface.co"
         self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
-        self.conversation_id_list = []
+        self.conversation_list = []
         self.__not_summarize_cids = []
-        self.accepted_welcome_modal = (
-            False  # It is no longer required to accept the welcome modal
-        )
-        self.llms = [
-            "meta-llama/Llama-2-70b-chat-hf",
-            "codellama/CodeLlama-34b-Instruct-hf",
-            "tiiuae/falcon-180B-chat",
-        ]  # The array is up to date as of October 2, 2023
+        self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
+
+        self.llms = self.get_remote_llms()
         self.active_model = self.llms[default_llm]
-        self.current_conversation = self.new_conversation()
-        self.system_prompts = {}
+
+        self.current_conversation = self.new_conversation(system_prompt=system_prompt)
 
     def get_hc_session(self) -> Session:
         session = Session()
@@ -81,7 +84,7 @@ class ChatBot:
         session.get(self.hf_base_url + "/chat")
         return session
 
-    def get_headers(self, ref=True, ref_cid=None) -> dict:
+    def get_headers(self, ref=True, ref_cid: conversation = None) -> dict:
         _h = {
             "Accept": "*/*",
             "Connection": "keep-alive",
@@ -97,6 +100,7 @@ class ChatBot:
             "Accept-Encoding": "gzip, deflate, br",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
         }
+
         if ref:
             if ref_cid is None:
                 ref_cid = self.current_conversation
@@ -114,8 +118,8 @@ class ChatBot:
     #
     # Returns a pointer to this objects list that contains id of conversations.
     def get_conversation_list(self) -> list:
-        return list(self.conversation_id_list)
-
+        return list(self.conversation_list)
+    
     def get_active_llm_index(self) -> int:
         return self.llms.index(self.active_model)
 
@@ -142,11 +146,12 @@ class ChatBot:
             )
 
         return True
-
-    def new_conversation(self) -> str:
-        """
-        Create a new conversation. Return the new conversation id. You should change the conversation by calling change_conversation() after calling this method.
-        """
+      
+      
+    def new_conversation(self, system_prompt: str = "", switch_to: bool = False) -> str:
+        '''
+        Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
+        '''
         err_count = 0
 
         # Accept the welcome modal when init.
@@ -164,18 +169,27 @@ class ChatBot:
             try:
                 resp = self.session.post(
                     self.hf_base_url + "/chat/conversation",
-                    json={"model": self.active_model},
+                    json={"model": self.active_model, "preprompt": system_prompt},
                     headers=_header,
-                    cookies=self.get_cookies(),
+                    cookies = self.get_cookies()
                 )
+                
                 logging.debug(resp.text)
-                cid = json.loads(resp.text)["conversationId"]
-                self.conversation_id_list.append(cid)
-                self.__not_summarize_cids.append(
-                    cid
-                )  # For the 1st chat, the conversation needs to be summarized.
-                self.__preserve_context(cid=cid, ending="1_1")
-                return cid
+                cid = json.loads(resp.text)['conversationId']
+
+                c = conversation()
+                c.id = cid
+                c.system_prompt = system_prompt
+                c.model = self.active_model
+
+                self.conversation_list.append(c)
+                self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
+                self.__preserve_context(cid = cid, ending = "1_1")
+
+                if switch_to:
+                    self.change_conversation(c)
+                
+                return c
 
             except BaseException as e:
                 err_count += 1
@@ -188,32 +202,27 @@ class ChatBot:
                     )
                 continue
 
-    def change_conversation(self, conversation_id: str) -> bool:
-        """
+    def change_conversation(self, conversation_object: conversation) -> bool:
+        '''
         Change the current conversation to another one. Need a valid conversation id.
-        """
-        # if conversation_id not in self.conversation_id_list:
-        #     raise InvalidConversationIDError(
-        #         "Invalid conversation id, not in conversation list."
-        #     )
-        self.current_conversation = conversation_id
-        return True
+        '''
 
-    def share_conversation(self, conversation_id: str = None) -> str:
-        """
+        if conversation_object not in self.conversation_list:
+            raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
+        self.current_conversation = conversation_object
+        return True
+    
+    def share_conversation(self, conversation_object: conversation = None) -> str:
+        '''
         Return a share link of the conversation.
-        """
-        if conversation_id is None:
-            conversation_id = self.current_conversation
+        '''
+        if conversation_object is None:
+            conversation_object = self.current_conversation
 
         headers = self.get_headers()
-
-        r = self.session.post(
-            f"{self.hf_base_url}/chat/conversation/{conversation_id}/share",
-            headers=headers,
-            cookies=self.get_cookies(),
-        )
-
+        
+        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_object}/share", headers=headers, cookies=self.get_cookies())
+        
         if r.status_code != 200:
             raise Exception(
                 f"Failed to share conversation with status code: {r.status_code}"
@@ -225,31 +234,25 @@ class ChatBot:
 
         raise Exception(f"Unknown server response: {response}")
 
-    def delete_conversation(self, conversation_id: str = None) -> bool:
+    def delete_conversation(self, conversation_object: conversation = None) -> bool:
         """
         Delete a HuggingChat conversation by conversation_id.
         """
 
-        if conversation_id is None:
-            conversation_id = self.current_conversation
+        if conversation_object is None:
+            conversation_object = self.current_conversation
 
         headers = self.get_headers()
 
-        r = self.session.delete(
-            f"{self.hf_base_url}/chat/conversation/{conversation_id}",
-            headers=headers,
-            cookies=self.get_cookies(),
-        )
+        r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_object}", headers=headers, cookies=self.get_cookies())
 
         if r.status_code != 200:
             raise DeleteConversationError(
                 f"Failed to delete conversation with status code: {r.status_code}"
             )
         else:
-            self.conversation_id_list.pop(
-                self.conversation_id_list.index(conversation_id)
-            )
-
+            self.conversation_list.pop(self.conversation_list.index(conversation_object))
+            
     def get_available_llm_models(self) -> list:
         """
         Get all available models that exists in huggingface.co/chat.
@@ -261,39 +264,14 @@ class ChatBot:
         """
         Sets the "Share Conversation with Model Authors setting" to the given val variable
         """
-        settings = {"shareConversationsWithModelAuthors": ("", "on" if val else "")}
+        settings = {
+            "shareConversationsWithModelAuthors": ("", "on" if val else "")
+        }
 
-        self.session.post(
-            self.hf_base_url + "/chat/settings",
-            headers={"Referer": "https://huggingface.co/chat"},
-            cookies=self.get_cookies(),
-            allow_redirects=True,
-            files=settings,
-        )
+        r = self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
 
-    def set_system_prompt(self, prompt: str, llmIndex: int = None):
-        """
-        Sets a system prompt for the given model index
-        You need to create a new conversation for this to work
-        """
-
-        if llmIndex is None:
-            llmIndex = self.get_active_llm_index()
-
-        elif llmIndex > len(self.llms) - 1 or llmIndex < 0:
-            raise IndexError("Out of range of llm index")
-
-        self.system_prompts[self.llms[llmIndex]] = prompt
-
-        settings = {"customPrompts": ("", json.dumps(self.system_prompts))}
-
-        self.session.post(
-            self.hf_base_url + "/chat/settings",
-            headers={"Referer": "https://huggingface.co/chat"},
-            cookies=self.get_cookies(),
-            allow_redirects=True,
-            files=settings,
-        )
+        if r.status_code != 200:
+            raise Exception(f"Failed to set share conversation with status code: {r.status_code}")
 
     def switch_llm(self, index: int) -> bool:
         """
@@ -341,6 +319,48 @@ class ChatBot:
         # else:
         #     print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
         #     return False
+
+
+    # Gives information such as name, websiteUrl, description, displayName, parameters, etc.
+    # We can use it in the future if we need to get information about models
+    def get_remote_llms(self) -> list:
+        '''
+        Fetches all possible LLMs that could be used
+        '''
+        
+        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get remote LLMs with status code: {r.status_code}")
+
+        data = r.json()["nodes"][0]["data"]
+        modelsIndices = data[data[0]["models"]] 
+
+        return [data[data[index]["name"]] for index in modelsIndices]
+
+    def get_conversation_from_id(self, conversation_id: str) -> conversation:
+        '''
+        Return a conversation object from the given conversation_id
+        '''
+
+        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
+
+        data = r.json()["nodes"][0]["data"]
+        conversationIndices = data[data[0]["conversations"]]
+
+        for index in conversationIndices:
+            conversation_data = data[index]
+            if data[conversation_data["id"]] == conversation_id:
+                c = conversation()
+                c.id = conversation_id
+                c.title = data[conversation_data["title"]]
+                c.model = data[conversation_data["model"]]
+                # unable to get system_prompt from returned data after first glance
+
+                return c
 
     def check_operation(self) -> bool:
         r = self.session.post(
@@ -568,7 +588,5 @@ if __name__ == "__main__":
     bot = ChatBot()
     message_content = bot.chat("Hello")
     print(message_content)
-    # summary = bot.summarize_conversation()
-    # print(summary)
     sharelink = bot.share_conversation()
     print(sharelink)
