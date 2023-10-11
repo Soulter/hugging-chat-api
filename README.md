@@ -46,7 +46,6 @@ sign.saveCookiesToDir(cookie_path_dir)
 # Create a ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
 
-
 # non stream response
 query_result = chatbot.query("Hi!")
 print(query_result) # or query_result.text or query_result["text"]
@@ -58,7 +57,7 @@ for resp in chatbot.query(
 ):
     print(resp)
 
-# Use web search *new
+# Use web search (new feature)
 query_result = chatbot.query("Hi!", web_search=True)
 print(query_result) # or query_result.text or query_result["text"]
 for source in query_result.web_search_sources:

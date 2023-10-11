@@ -74,9 +74,12 @@ chatbot.change_conversation(id)
 # 获取对话列表
 conversation_list = chatbot.get_conversation_list()
 
-# 切换模型 (默认: meta-llama/Llama-2-70b-chat-hf. )
-chatbot.switch_llm(0) # 切换到 `OpenAssistant/oasst-sft-6-llama-30b-xor`
-chatbot.switch_llm(1) # 切换到 `meta-llama/Llama-2-70b-chat-hf`
+# 获取可用的模型列表
+models = chatbot.get_available_llm_models()
+
+# 切换模型
+chatbot.switch_llm(0) # 切换到第一个模型
+chatbot.switch_llm(1) # 切换到第二个模型
 ```
 
 

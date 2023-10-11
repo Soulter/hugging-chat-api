@@ -8,3 +8,4 @@ dist/*
 .idea/
 usercookies/
 .mypy_cache
+build/
