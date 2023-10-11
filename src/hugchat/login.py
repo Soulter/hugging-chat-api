@@ -13,8 +13,8 @@ class Login:
         #     logging.debug("Cookie directory not found, creating...")
         #     os.makedirs(self.COOKIE_DIR)
         # logging.debug(f"Cookie store path: {self.COOKIE_DIR}")
-        self.DEFAULT_PATH_DIR = os.path.dirname(os.path.abspath(__file__)) + "/usercookies"
-        self.DEFAULT_COOKIE_PATH = self.DEFAULT_PATH_DIR + f"/{email}.json"
+        self.DEFAULT_PATH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usercookies")
+        self.DEFAULT_COOKIE_PATH = self.DEFAULT_PATH_DIR + os.path.join(f"{email}.json")
         
         self.email: str = email
         self.passwd: str = passwd
