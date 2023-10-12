@@ -236,6 +236,20 @@ class ChatBot:
             return response["url"]
 
         raise Exception(f"Unknown server response: {response}")
+    
+    def delete_all_conversations(self) -> None:
+        '''
+        Deletes ALL conversations on the HuggingFace account
+        '''
+
+        settings = {
+            "": ("", "")
+        }
+
+        r = self.session.post(f"{self.hf_base_url}/chat/conversations?/delete", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
+
+        if r.status_code != 200:
+            raise DeleteConversationError(f"Failed to delete ALL conversations with status code: {r.status_code}")
 
     def delete_conversation(self, conversation_object: conversation = None) -> bool:
         """
