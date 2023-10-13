@@ -258,7 +258,7 @@ class ChatBot:
 
     def delete_conversation(self, conversation_object: conversation = None) -> bool:
         """
-        Delete a HuggingChat conversation by conversation_id.
+        Delete a HuggingChat conversation by conversation.
         """
 
         if conversation_object is None:
@@ -277,7 +277,7 @@ class ChatBot:
             
     def get_available_llm_models(self) -> list:
         """
-        Get all available models that exists in huggingface.co/chat.
+        Get all available models that are available in huggingface.co/chat.
         """
         return self.llms
 
@@ -346,7 +346,7 @@ class ChatBot:
     # We can use it in the future if we need to get information about models
     def get_remote_llms(self) -> list:
         '''
-        Fetches all possible LLMs that could be used
+        Fetches all possible LLMs that could be used. Returns the LLMs in a list
         '''
         
         r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
@@ -389,7 +389,7 @@ class ChatBot:
     
     def get_conversation_info(self, conversation: conversation = None):
         '''
-        Fetches information relating to the conversation. Returns the conversation object.
+        Fetches information related to the specified conversation. Returns the conversation object.
         '''
         
         if conversation is None:
@@ -418,7 +418,7 @@ class ChatBot:
 
     def get_conversation_from_id(self, conversation_id: str) -> conversation:
         '''
-        Return a conversation object from the given conversation_id
+        Returns a conversation object from the given conversation_id.
         '''
 
         r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
