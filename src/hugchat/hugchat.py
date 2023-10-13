@@ -210,10 +210,12 @@ class ChatBot:
         Change the current conversation to another one. Need a valid conversation id.
         '''
 
-        if conversation_object not in self.conversation_list:
-            raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
-        self.current_conversation = conversation_object
-        return True
+        for conversation in self.conversation_list:
+            if conversation.id == conversation_object.id:
+                self.current_conversation = conversation_object
+                return True
+
+        raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
     
     def share_conversation(self, conversation_object: conversation = None) -> str:
         '''
