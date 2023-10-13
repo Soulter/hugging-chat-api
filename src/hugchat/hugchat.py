@@ -18,6 +18,7 @@ class conversation:
     model: str = None
     id: str = None
     system_prompt: str = None
+    history: list = []
 
     def __str__(self) -> str:
         return self.id
@@ -359,10 +360,14 @@ class ChatBot:
         return [data[data[index]["name"]] for index in modelsIndices]
     
     def get_remote_conversations(self, replace_conversation_list=True):
+        '''
+        Returns all the remote conversations for the active account. Returns the conversations in a list.
+        '''
+
         r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
 
         if r.status_code != 200:
-            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
+            raise Exception(f"Failed to get remote conversations with status code: {r.status_code}")
 
         data = r.json()["nodes"][0]["data"]
         conversationIndices = data[data[0]["conversations"]]
@@ -381,6 +386,35 @@ class ChatBot:
             self.conversation_list = conversations
 
         return conversations
+    
+    def get_conversation_info(self, conversation: conversation = None):
+        '''
+        Fetches information relating to the conversation. Returns the conversation object.
+        '''
+        
+        if conversation is None:
+            conversation = self.current_conversation
+
+        r = self.session.post(self.hf_base_url + f"/chat/conversation/{conversation.id}/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
+
+        data = r.json()["nodes"][1]["data"]
+
+        conversation.model = data[data[0]["model"]]
+        conversation.system_prompt = data[data[0]["preprompt"]]
+        conversation.title = data[data[0]["title"]]
+
+        messages = data[data[0]["messages"]]
+        conversation.history = []
+        
+        for index in messages:
+            message = data[data[index]["content"]].strip()
+
+            conversation.history.append(message)
+
+        return conversation
 
     def get_conversation_from_id(self, conversation_id: str) -> conversation:
         '''
