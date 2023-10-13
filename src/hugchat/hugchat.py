@@ -252,6 +252,8 @@ class ChatBot:
 
         if r.status_code != 200:
             raise DeleteConversationError(f"Failed to delete ALL conversations with status code: {r.status_code}")
+        
+        self.conversation_list = []
 
     def delete_conversation(self, conversation_object: conversation = None) -> bool:
         """
@@ -355,6 +357,30 @@ class ChatBot:
         modelsIndices = data[data[0]["models"]] 
 
         return [data[data[index]["name"]] for index in modelsIndices]
+    
+    def get_remote_conversations(self, replace_conversation_list=True):
+        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
+
+        data = r.json()["nodes"][0]["data"]
+        conversationIndices = data[data[0]["conversations"]]
+        conversations = []
+
+        for index in conversationIndices:
+            conversation_data = data[index]
+            c = conversation()
+            c.id = data[conversation_data["id"]]
+            c.title = data[conversation_data["title"]]
+            c.model = data[conversation_data["model"]]
+
+            conversations.append(c)
+
+        if replace_conversation_list:
+            self.conversation_list = conversations
+
+        return conversations
 
     def get_conversation_from_id(self, conversation_id: str) -> conversation:
         '''
