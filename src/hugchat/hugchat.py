@@ -255,6 +255,7 @@ class ChatBot:
             raise DeleteConversationError(f"Failed to delete ALL conversations with status code: {r.status_code}")
         
         self.conversation_list = []
+        self.current_conversation = None
 
     def delete_conversation(self, conversation_object: conversation = None) -> bool:
         """
@@ -274,6 +275,9 @@ class ChatBot:
             )
         else:
             self.conversation_list.pop(self.conversation_list.index(conversation_object))
+
+            if conversation_object is self.current_conversation:
+                self.current_conversation = None
             
     def get_available_llm_models(self) -> list:
         """
@@ -466,11 +470,13 @@ class ChatBot:
         is_retry: bool = False,
         retry_count: int = 5,
         _stream_yield_all: bool = False,  # yield all responses from the server.
+        conversation: conversation = None
     ) -> typing.Generator[dict, None, None]:
+        if conversation is None:
+            conversation = self.current_conversation
+        
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
-        if self.current_conversation == "":
-            self.current_conversation = self.new_conversation()
         if text == "":
             raise Exception("the prompt can not be empty.")
 
@@ -498,7 +504,7 @@ class ChatBot:
         }
         headers = {
             "Origin": "https://huggingface.co",
-            "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
+            "Referer": f"https://huggingface.co/chat/conversation/{conversation}",
             "Content-Type": "application/json",
             "Sec-ch-ua": '"Chromium";v="94", "Microsoft Edge";v="94", ";Not A Brand";v="99"',
             "Sec-ch-ua-mobile": "?0",
@@ -512,7 +518,7 @@ class ChatBot:
 
         while retry_count > 0:
             resp = self.session.post(
-                self.hf_base_url + f"/chat/conversation/{self.current_conversation}",
+                self.hf_base_url + f"/chat/conversation/{conversation}",
                 json=req_json,
                 stream=True,
                 headers=headers,
@@ -569,7 +575,7 @@ class ChatBot:
             # if self.current_conversation in self.__not_summarize_cids:
             #     self.summarize_conversation()
             #     self.__not_summarize_cids.remove(self.current_conversation)
-            self.__preserve_context(ref_cid=self.current_conversation)
+            self.__preserve_context(ref_cid=conversation.id)
         except:
             pass
 
@@ -593,16 +599,21 @@ class ChatBot:
         use_cache: bool = False,
         is_retry: bool = False,
         retry_count: int = 5,
+        conversation: conversation = None
     ) -> Message:
         """
         **Deprecated**
         Same as chat now
         """
+        if conversation is None:
+            conversation = self.current_conversation
+
         return self.chat(
-            text=text,
-            web_search=web_search,
-            _stream_yield_all=_stream_yield_all,
-            retry_count=retry_count,
+            text = text,
+            web_search = web_search,
+            _stream_yield_all = _stream_yield_all,
+            retry_count = retry_count,
+            conversation = conversation
         )
 
     def chat(
@@ -611,6 +622,7 @@ class ChatBot:
         web_search: bool = False,
         _stream_yield_all: bool = False,  # For stream mode, yield all responses from the server.
         retry_count: int = 5,
+        conversation: conversation = None,
         *args,
         **kvargs,
     ) -> Message:
@@ -628,15 +640,19 @@ class ChatBot:
 
         For more detail please see Message documentation(Message.__doc__)
         """
+        if conversation is None:
+            conversation = self.current_conversation
+        
         msg = Message(
             g=self._stream_query(
-                text=text,
-                web_search=web_search,
-                _stream_yield_all=_stream_yield_all,  # For stream mode, yield all responses from the server.
-                retry_count=retry_count,
+                text = text,
+                web_search = web_search,
+                _stream_yield_all = _stream_yield_all,  # For stream mode, yield all responses from the server.
+                retry_count = retry_count,
+                conversation = conversation
             ),
-            _stream_yield_all=_stream_yield_all,
-            web_search=web_search,
+            _stream_yield_all = _stream_yield_all,
+            web_search = web_search,
         )
         return msg
 
