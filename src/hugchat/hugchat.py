@@ -18,6 +18,7 @@ class conversation:
     model: str = None
     id: str = None
     system_prompt: str = None
+    history: list = []
 
     def __str__(self) -> str:
         return self.id
@@ -210,10 +211,12 @@ class ChatBot:
         Change the current conversation to another one. Need a valid conversation id.
         '''
 
-        if conversation_object not in self.conversation_list:
-            raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
-        self.current_conversation = conversation_object
-        return True
+        for conversation in self.conversation_list:
+            if conversation.id == conversation_object.id:
+                self.current_conversation = conversation_object
+                return True
+
+        raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
     
     def share_conversation(self, conversation_object: conversation = None) -> str:
         '''
@@ -236,10 +239,26 @@ class ChatBot:
             return response["url"]
 
         raise Exception(f"Unknown server response: {response}")
+    
+    def delete_all_conversations(self) -> None:
+        '''
+        Deletes ALL conversations on the HuggingFace account
+        '''
+
+        settings = {
+            "": ("", "")
+        }
+
+        r = self.session.post(f"{self.hf_base_url}/chat/conversations?/delete", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
+
+        if r.status_code != 200:
+            raise DeleteConversationError(f"Failed to delete ALL conversations with status code: {r.status_code}")
+        
+        self.conversation_list = []
 
     def delete_conversation(self, conversation_object: conversation = None) -> bool:
         """
-        Delete a HuggingChat conversation by conversation_id.
+        Delete a HuggingChat conversation by conversation.
         """
 
         if conversation_object is None:
@@ -258,7 +277,7 @@ class ChatBot:
             
     def get_available_llm_models(self) -> list:
         """
-        Get all available models that exists in huggingface.co/chat.
+        Get all available models that are available in huggingface.co/chat.
         """
         return self.llms
 
@@ -327,7 +346,7 @@ class ChatBot:
     # We can use it in the future if we need to get information about models
     def get_remote_llms(self) -> list:
         '''
-        Fetches all possible LLMs that could be used
+        Fetches all possible LLMs that could be used. Returns the LLMs in a list
         '''
         
         r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
@@ -339,10 +358,67 @@ class ChatBot:
         modelsIndices = data[data[0]["models"]] 
 
         return [data[data[index]["name"]] for index in modelsIndices]
+    
+    def get_remote_conversations(self, replace_conversation_list=True):
+        '''
+        Returns all the remote conversations for the active account. Returns the conversations in a list.
+        '''
+
+        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get remote conversations with status code: {r.status_code}")
+
+        data = r.json()["nodes"][0]["data"]
+        conversationIndices = data[data[0]["conversations"]]
+        conversations = []
+
+        for index in conversationIndices:
+            conversation_data = data[index]
+            c = conversation()
+            c.id = data[conversation_data["id"]]
+            c.title = data[conversation_data["title"]]
+            c.model = data[conversation_data["model"]]
+
+            conversations.append(c)
+
+        if replace_conversation_list:
+            self.conversation_list = conversations
+
+        return conversations
+    
+    def get_conversation_info(self, conversation: conversation = None):
+        '''
+        Fetches information related to the specified conversation. Returns the conversation object.
+        '''
+        
+        if conversation is None:
+            conversation = self.current_conversation
+
+        r = self.session.post(self.hf_base_url + f"/chat/conversation/{conversation.id}/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+
+        if r.status_code != 200:
+            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
+
+        data = r.json()["nodes"][1]["data"]
+
+        conversation.model = data[data[0]["model"]]
+        conversation.system_prompt = data[data[0]["preprompt"]]
+        conversation.title = data[data[0]["title"]]
+
+        messages = data[data[0]["messages"]]
+        conversation.history = []
+        
+        for index in messages:
+            message = data[data[index]["content"]].strip()
+
+            conversation.history.append(message)
+
+        return conversation
 
     def get_conversation_from_id(self, conversation_id: str) -> conversation:
         '''
-        Return a conversation object from the given conversation_id
+        Returns a conversation object from the given conversation_id.
         '''
 
         r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
