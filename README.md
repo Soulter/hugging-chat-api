@@ -78,6 +78,16 @@ models = chatbot.get_available_llm_models()
 # Switch model to the given index
 chatbot.switch_llm(0) # Switch to the first model
 chatbot.switch_llm(1) # Switch to the second model
+
+# Get information about the current conversation
+info = chatbot.get_conversation_info()
+print(info.id, info.title, info.model, info.system_prompt, info.history)
+
+# Get conversations on the server that are not from the current session
+chatbot.get_remote_conversations(replace_conversation_list=True)
+
+# Delete all the conversations for the logged in user
+chatbot.delete_all_conversations()
 ```
 
 The `query()` function receives these parameters:
