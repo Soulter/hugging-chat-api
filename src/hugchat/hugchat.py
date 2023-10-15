@@ -425,24 +425,10 @@ class ChatBot:
         Returns a conversation object from the given conversation_id.
         '''
 
-        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+        c = conversation()
+        c.id = conversation_id
 
-        if r.status_code != 200:
-            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
-
-        data = r.json()["nodes"][0]["data"]
-        conversationIndices = data[data[0]["conversations"]]
-
-        for index in conversationIndices:
-            conversation_data = data[index]
-            if data[conversation_data["id"]] == conversation_id:
-                c = conversation()
-                c.id = conversation_id
-                c.title = data[conversation_data["title"]]
-                c.model = data[conversation_data["model"]]
-                # unable to get system_prompt from returned data after first glance
-
-                return c
+        return self.get_conversation_info(c)
 
     def check_operation(self) -> bool:
         r = self.session.post(
