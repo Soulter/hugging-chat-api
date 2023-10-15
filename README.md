@@ -8,8 +8,12 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 [![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
 [![Downloads](https://static.pepy.tech/badge/hugchat)](https://pypi.python.org/pypi/hugchat)
 
-> **Note**  
+> **Note**
+>
+> Some recent versions may no longer be fully backward compatible to some extent, a good idea is to review this README or issues promptly after any problem arise.
+> 
 > Recently new updates:
+> - **Custom parameters(temprature, max_token, etc) is no longer supported**
 > - Web search
 > - Memorize context
 > - Supports for changing LLMs ([#56](https://github.com/Soulter/hugging-chat-api/issues/56)) (v0.0.9)
@@ -26,6 +30,8 @@ pip3 install hugchat
 ## Usage
 
 ### API
+
+The following are all common usages of this repo, You may not necessarily use all of them, You can add or delete some as needed :)
 
 ```py
 from hugchat import hugchat
@@ -72,7 +78,7 @@ chatbot.change_conversation(id)
 # Get conversation list
 conversation_list = chatbot.get_conversation_list()
 
-# Get the available models
+# Get the available models (not hardcore)
 models = chatbot.get_available_llm_models()
 
 # Switch model to the given index
@@ -83,10 +89,10 @@ chatbot.switch_llm(1) # Switch to the second model
 info = chatbot.get_conversation_info()
 print(info.id, info.title, info.model, info.system_prompt, info.history)
 
-# Get conversations on the server that are not from the current session
+# Get conversations on the server that are not from the current session (all your conversations in huggingchat)
 chatbot.get_remote_conversations(replace_conversation_list=True)
 
-# Delete all the conversations for the logged in user
+# [DANGER] Delete all the conversations for the logged in user
 chatbot.delete_all_conversations()
 ```
 
