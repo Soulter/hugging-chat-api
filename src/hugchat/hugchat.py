@@ -14,11 +14,23 @@ from .message import Message
 from .exceptions import *
 
 class conversation:
-    title: str = None
-    model: str = None
-    id: str = None
-    system_prompt: str = None
-    history: list = []
+    def __init__(
+        self,
+        id: str = None,
+        title: str = None,
+        model: str = None,
+        system_prompt: str = None,
+        history: list = []
+    ):
+        '''
+        Returns a conversation object
+        '''
+
+        self.id = id
+        self.title = title
+        self.model = model
+        self.system_prompt = system_prompt
+        self.history = history
 
     def __str__(self) -> str:
         return self.id
@@ -181,10 +193,7 @@ class ChatBot:
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
 
-                c = conversation()
-                c.id = cid
-                c.system_prompt = system_prompt
-                c.model = self.active_model
+                c = conversation(id=cid, system_prompt=system_prompt, model=self.active_model)
 
                 self.conversation_list.append(c)
                 self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
@@ -379,10 +388,7 @@ class ChatBot:
 
         for index in conversationIndices:
             conversation_data = data[index]
-            c = conversation()
-            c.id = data[conversation_data["id"]]
-            c.title = data[conversation_data["title"]]
-            c.model = data[conversation_data["model"]]
+            c = conversation(id=data[conversation_data["id"]], title=data[conversation_data["title"]], model=data[conversation_data["model"]])
 
             conversations.append(c)
 
@@ -425,8 +431,7 @@ class ChatBot:
         Returns a conversation object from the given conversation_id.
         '''
 
-        c = conversation()
-        c.id = conversation_id
+        c = conversation(id=conversation_id)
 
         return self.get_conversation_info(c)
 
