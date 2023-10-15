@@ -204,11 +204,19 @@ class ChatBot:
         return True
       
       
-    def new_conversation(self, system_prompt: str = "", switch_to: bool = False) -> str:
+    def new_conversation(self, modelIndex: int = None, system_prompt: str = "", switch_to: bool = False) -> str:
         '''
         Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
         '''
         err_count = 0
+
+        if modelIndex == None:
+            model = self.active_model
+        else:
+            if modelIndex < 0 or modelIndex >= len(self.llms):
+                raise IndexError("Out of range of llm index")
+            
+            model = self.llms[modelIndex]
 
         # Accept the welcome modal when init.
         # 17/5/2023: This is not required anymore.
@@ -225,7 +233,7 @@ class ChatBot:
             try:
                 resp = self.session.post(
                     self.hf_base_url + "/chat/conversation",
-                    json={"model": self.active_model, "preprompt": system_prompt},
+                    json={"model": model, "preprompt": system_prompt},
                     headers=_header,
                     cookies = self.get_cookies()
                 )
@@ -233,7 +241,7 @@ class ChatBot:
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
 
-                c = conversation(id=cid, system_prompt=system_prompt, model=self.active_model)
+                c = conversation(id=cid, system_prompt=system_prompt, model=model)
 
                 self.conversation_list.append(c)
                 self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
