@@ -14,11 +14,63 @@ from .message import Message
 from .exceptions import *
 
 class conversation:
-    title: str = None
-    model: str = None
-    id: str = None
-    system_prompt: str = None
-    history: list = []
+    def __init__(
+        self,
+        id: str = None,
+        title: str = None,
+        model: str = None,
+        system_prompt: str = None,
+        history: list = []
+    ):
+        '''
+        Returns a conversation object
+        '''
+
+        self.id = id
+        self.title = title
+        self.model = model
+        self.system_prompt = system_prompt
+        self.history = history
+
+    def __str__(self) -> str:
+        return self.id
+
+
+# For future use -- is not used currently
+class model:
+    def __init__(
+        self,
+        id: str = None,
+        name: str = None,
+        displayName: str = None,
+
+        preprompt: str = None,
+        promptExamples: list = None,
+        websiteUrl: str = None,
+        description: str = None,
+
+        datasetName: str = None,
+        datasetUrl: str = None,
+        modelUrl: str = None,
+        parameters: dict = None
+    ):
+        '''
+        Returns a model object
+        '''
+
+        self.id: str = id,
+        self.name: str = name,
+        self.displayName: str = displayName,
+
+        self.preprompt: str = preprompt,
+        self.promptExamples: list = promptExamples,
+        self.websiteUrl: str = websiteUrl,
+        self.description: str = description,
+
+        self.datasetName: str = datasetName,
+        self.datasetUrl: str = datasetUrl,
+        self.modelUrl: str = modelUrl,
+        self.parameters: dict = parameters
 
     def __str__(self) -> str:
         return self.id
@@ -181,10 +233,7 @@ class ChatBot:
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)['conversationId']
 
-                c = conversation()
-                c.id = cid
-                c.system_prompt = system_prompt
-                c.model = self.active_model
+                c = conversation(id=cid, system_prompt=system_prompt, model=self.active_model)
 
                 self.conversation_list.append(c)
                 self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
@@ -255,6 +304,7 @@ class ChatBot:
             raise DeleteConversationError(f"Failed to delete ALL conversations with status code: {r.status_code}")
         
         self.conversation_list = []
+        self.current_conversation = None
 
     def delete_conversation(self, conversation_object: conversation = None) -> bool:
         """
@@ -274,6 +324,9 @@ class ChatBot:
             )
         else:
             self.conversation_list.pop(self.conversation_list.index(conversation_object))
+
+            if conversation_object is self.current_conversation:
+                self.current_conversation = None
             
     def get_available_llm_models(self) -> list:
         """
@@ -375,10 +428,7 @@ class ChatBot:
 
         for index in conversationIndices:
             conversation_data = data[index]
-            c = conversation()
-            c.id = data[conversation_data["id"]]
-            c.title = data[conversation_data["title"]]
-            c.model = data[conversation_data["model"]]
+            c = conversation(id=data[conversation_data["id"]], title=data[conversation_data["title"]], model=data[conversation_data["model"]])
 
             conversations.append(c)
 
@@ -421,24 +471,9 @@ class ChatBot:
         Returns a conversation object from the given conversation_id.
         '''
 
-        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+        c = conversation(id=conversation_id)
 
-        if r.status_code != 200:
-            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
-
-        data = r.json()["nodes"][0]["data"]
-        conversationIndices = data[data[0]["conversations"]]
-
-        for index in conversationIndices:
-            conversation_data = data[index]
-            if data[conversation_data["id"]] == conversation_id:
-                c = conversation()
-                c.id = conversation_id
-                c.title = data[conversation_data["title"]]
-                c.model = data[conversation_data["model"]]
-                # unable to get system_prompt from returned data after first glance
-
-                return c
+        return self.get_conversation_info(c)
 
     def check_operation(self) -> bool:
         r = self.session.post(
@@ -466,11 +501,13 @@ class ChatBot:
         is_retry: bool = False,
         retry_count: int = 5,
         _stream_yield_all: bool = False,  # yield all responses from the server.
+        conversation: conversation = None
     ) -> typing.Generator[dict, None, None]:
+        if conversation is None:
+            conversation = self.current_conversation
+        
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
-        if self.current_conversation == "":
-            self.current_conversation = self.new_conversation()
         if text == "":
             raise Exception("the prompt can not be empty.")
 
@@ -498,7 +535,7 @@ class ChatBot:
         }
         headers = {
             "Origin": "https://huggingface.co",
-            "Referer": f"https://huggingface.co/chat/conversation/{self.current_conversation}",
+            "Referer": f"https://huggingface.co/chat/conversation/{conversation}",
             "Content-Type": "application/json",
             "Sec-ch-ua": '"Chromium";v="94", "Microsoft Edge";v="94", ";Not A Brand";v="99"',
             "Sec-ch-ua-mobile": "?0",
@@ -512,7 +549,7 @@ class ChatBot:
 
         while retry_count > 0:
             resp = self.session.post(
-                self.hf_base_url + f"/chat/conversation/{self.current_conversation}",
+                self.hf_base_url + f"/chat/conversation/{conversation}",
                 json=req_json,
                 stream=True,
                 headers=headers,
@@ -569,7 +606,7 @@ class ChatBot:
             # if self.current_conversation in self.__not_summarize_cids:
             #     self.summarize_conversation()
             #     self.__not_summarize_cids.remove(self.current_conversation)
-            self.__preserve_context(ref_cid=self.current_conversation)
+            self.__preserve_context(ref_cid=conversation.id)
         except:
             pass
 
@@ -593,16 +630,21 @@ class ChatBot:
         use_cache: bool = False,
         is_retry: bool = False,
         retry_count: int = 5,
+        conversation: conversation = None
     ) -> Message:
         """
         **Deprecated**
         Same as chat now
         """
+        if conversation is None:
+            conversation = self.current_conversation
+
         return self.chat(
-            text=text,
-            web_search=web_search,
-            _stream_yield_all=_stream_yield_all,
-            retry_count=retry_count,
+            text = text,
+            web_search = web_search,
+            _stream_yield_all = _stream_yield_all,
+            retry_count = retry_count,
+            conversation = conversation
         )
 
     def chat(
@@ -611,6 +653,7 @@ class ChatBot:
         web_search: bool = False,
         _stream_yield_all: bool = False,  # For stream mode, yield all responses from the server.
         retry_count: int = 5,
+        conversation: conversation = None,
         *args,
         **kvargs,
     ) -> Message:
@@ -628,15 +671,19 @@ class ChatBot:
 
         For more detail please see Message documentation(Message.__doc__)
         """
+        if conversation is None:
+            conversation = self.current_conversation
+        
         msg = Message(
             g=self._stream_query(
-                text=text,
-                web_search=web_search,
-                _stream_yield_all=_stream_yield_all,  # For stream mode, yield all responses from the server.
-                retry_count=retry_count,
+                text = text,
+                web_search = web_search,
+                _stream_yield_all = _stream_yield_all,  # For stream mode, yield all responses from the server.
+                retry_count = retry_count,
+                conversation = conversation
             ),
-            _stream_yield_all=_stream_yield_all,
-            web_search=web_search,
+            _stream_yield_all = _stream_yield_all,
+            web_search = web_search,
         )
         return msg
 

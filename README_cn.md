@@ -86,18 +86,6 @@ chatbot.switch_llm(1) # 切换到第二个模型
 `query()` 函数接受以下参数:
 
 - `text`: Required[str].
-- `temperature`: Optional[float]. Default is 0.9
-- `top_p`: Optional[float]. Default is 0.95
-- `repetition_penalty`: Optional[float]. Default is 1.2
-- `top_k`: Optional[int]. Default is 50
-- `truncate`: Optional[int]. Default is 1024
-- `watermark`: Optional[bool]. Default is False
-- `max_new_tokens`: Optional[int]. Default is 1024
-- `stop`: Optional[list]. Default is ["`</s>`"]
-- `return_full_text`: Optional[bool]. Default is False
-- `stream`: 是否为流式响应. Optional[bool]. Default is False
-- `use_cache`: Optional[bool]. Default is False
-- `is_retry`: Optional[bool]. Default is False
 - `retry_count`: 重试次数. Optional[int]. Default is 5
 - `web_search` : 是否使用联网搜索. Optional[bool]
 

@@ -93,18 +93,6 @@ chatbot.delete_all_conversations()
 The `query()` function receives these parameters:
 
 - `text`: Required[str].
-- `temperature`: Optional[float]. Default is 0.9
-- `top_p`: Optional[float]. Default is 0.95
-- `repetition_penalty`: Optional[float]. Default is 1.2
-- `top_k`: Optional[int]. Default is 50
-- `truncate`: Optional[int]. Default is 1024
-- `watermark`: Optional[bool]. Default is False
-- `max_new_tokens`: Optional[int]. Default is 1024
-- `stop`: Optional[list]. Default is ["`</s>`"]
-- `return_full_text`: Optional[bool]. Default is False
-- `stream`: Optional[bool]. Default is True
-- `use_cache`: Optional[bool]. Default is False
-- `is_retry`: Optional[bool]. Default is False
 - `retry_count`: Optional[int]. Number of retries for requesting huggingchat. Default is 5
 - `web_search` : Optional[bool]. Whether to use online search.
 
