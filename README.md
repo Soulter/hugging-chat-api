@@ -4,9 +4,12 @@ English | [简体中文](README_cn.md)
 
 Unofficial HuggingChat Python API, extensible for chatbots etc.
 
-[![PyPi](https://img.shields.io/pypi/v/hugchat.svg)](https://pypi.python.org/pypi/hugchat)
-[![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
-[![Downloads](https://static.pepy.tech/badge/hugchat)](https://pypi.python.org/pypi/hugchat)
+[![PyPi](https://img.shields.io/pypi/v/hugchat.svg?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![Support_Platform](https://img.shields.io/badge/3.6+-%234ea94b.svg?style=for-the-badge&logo=python&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![DownloadsPW](https://img.shields.io/pypi/dw/hugchat?style=for-the-badge&logo=download&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![Status](https://img.shields.io/badge/status-operational-%234ea94b.svg?style=for-the-badge&logo=ok&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![Downloads](https://static.pepy.tech/badge/hugchat?style=for-the-badge&logo=download&logoColor=white)](https://www.pepy.tech/projects/hugchat)
+
 
 > **Note**
 >
