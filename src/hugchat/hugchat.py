@@ -653,7 +653,7 @@ class ChatBot:
                     raise ModelOverloadedError(
                         "Model is overloaded, please try again later or switch to another model."
                     )
-                logging.debug(res.headers)
+                logging.debug(resp.headers)
                 raise ChatError(f"Failed to parse response: {res}")
             if break_label:
                 break
