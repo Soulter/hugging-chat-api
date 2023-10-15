@@ -230,7 +230,7 @@ class ChatBot:
             try:
                 resp = self.session.post(
                     self.hf_base_url + "/chat/conversation",
-                    json={"model": model.id, "preprompt": system_prompt},
+                    json={"model": model.id, "preprompt": system_prompt if system_prompt != "" else model.preprompt},
                     headers=_header,
                     cookies = self.get_cookies()
                 )
