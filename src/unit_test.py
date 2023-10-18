@@ -69,7 +69,7 @@ class TestAPI(object):
         """
         test delete conversation module
         """
-        chatbot.delete_conversation()
+        chatbot.delete_conversation(my_conversation)
 
     def test_delete_all_conversations(self):
         """
