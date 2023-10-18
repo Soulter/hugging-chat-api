@@ -38,5 +38,7 @@ jobs:
     #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
+        export EMAIL=${{ secrets.EMAIL }}
+        export PASSWORD=${{ secrets.PASSWORD }}
         cd src
         pytest unit_test.py -s
