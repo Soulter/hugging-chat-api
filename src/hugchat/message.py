@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from typing import Generator, Union
 
 from .exceptions import ChatError, ModelOverloadedError
@@ -27,8 +26,6 @@ class WebSearchSource:
             "hostname": self.hostname,
         })
 
-
-@dataclass
 class Message(Generator):
     """
     :Args:
@@ -61,11 +58,22 @@ class Message(Generator):
     g: Generator
     _stream_yield_all: bool = False
     web_search: bool = False
-    web_search_sources: list[WebSearchSource] = []
+
+    web_search_sources: list = []
     text: str = "" # For backward compatibility, we have to reserve the `text` field.
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
     error: Union[Exception, None] = None
+
+    def __init__(
+        self,
+        g: Generator,
+        _stream_yield_all: bool = False,
+        web_search: bool = False,
+    ) -> None:
+        self.g = g
+        self._stream_yield_all = _stream_yield_all
+        self.web_search = web_search
 
     def __next__(self) -> dict:
         if self.msg_status:
@@ -74,6 +82,12 @@ class Message(Generator):
         try:
             a: dict = next(self.g)
             t: str = a["type"]
+            message_type: str = ""
+            if "messageType" in a:
+                message_type: str = a["messageType"]
+            if message_type == "error":
+                self.error = ChatError(a["message"])
+                self.msg_status = MSGSTATUS_REJECTED
             if t == MSGTYPE_STREAM:
                 self.web_search_done = True
             elif t == MSGTYPE_STATUS:
@@ -122,9 +136,9 @@ class Message(Generator):
 
     def throw(
         self,
-        __typ: type[BaseException],
-        __val: Union[BaseException, object] = None,
-        __tb=None,
+        __typ,
+        __val = None,
+        __tb = None,
     ):
         return self.g.throw(__typ, __val, __tb)
 
@@ -139,7 +153,7 @@ class Message(Generator):
         return self.text
 
 
-    def get_search_sources(self) -> list[WebSearchSource]:
+    def get_search_sources(self) -> list:
         """
         :Return:
             - self.web_search_sources
