@@ -61,9 +61,7 @@ class Message(Generator):
     g: Generator
     _stream_yield_all: bool = False
     web_search: bool = False
-    web_search_sources: list[WebSearchSource] = field(
-        default_factory=lambda: []
-    )
+    web_search_sources: list[WebSearchSource] = []
     text: str = "" # For backward compatibility, we have to reserve the `text` field.
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
