@@ -90,9 +90,12 @@ def cli():
     running = True
     is_web_search = False
     web_search_hint = False
+    
     print("Login successfully🎉 You can input `/help` to open the command menu.")
+
     while running:
         question = input("> ")
+        
         if question == "/new":
             cid = chatbot.new_conversation()
             print("The new conversation ID is: " + cid)
