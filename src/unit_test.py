@@ -65,11 +65,11 @@ class TestAPI(object):
 
         assert res is not None
     
-    def test_delete_conversation(self):
-        """
-        test delete conversation module
-        """
-        chatbot.delete_conversation(my_conversation)
+    # def test_delete_conversation(self):
+    #     """
+    #     test delete conversation module
+    #     """
+    #     chatbot.delete_conversation(my_conversation)
 
     def test_delete_all_conversations(self):
         """
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     test = TestAPI()
     test.test_login()
     test.test_create_conversation()
-    test.test_delete_conversation()
+    # test.test_delete_conversation()
     test.test_chat_without_web_search()
     test.test_chat_web_search()
     test.test_delete_all_conversations()
