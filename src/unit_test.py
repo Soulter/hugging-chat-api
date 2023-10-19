@@ -4,8 +4,10 @@ For test hugchat
 
 import os
 import logging
-from .hugchat import hugchat
+from .hugchat import hugchat, cli
 from .hugchat.login import Login
+from sys import argv
+from unittest.mock import patch
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -76,6 +78,36 @@ class TestAPI(object):
         test delete all conversations module
         """
         chatbot.delete_all_conversations()
+    
+    def test_cli(self):
+        global times_run
+        times_run = -1
+
+        # many not enabled because the CLI is currently very broken
+        return_strings = [
+            "/help",
+            "Hello!",
+            # "/new",
+            # "/ids",
+            # "/sharewithauthor off"
+        ]
+        def input_callback(_):
+            global times_run
+            times_run += 1
+
+            if times_run >= len(return_strings):
+                raise KeyboardInterrupt()
+
+            return return_strings[times_run]
+        
+        argv.append("-u")
+        argv.append(EMAIL)
+        try:
+            with patch("getpass.getpass", side_effect=lambda _: PASSWORD):
+                with patch('builtins.input', side_effect=input_callback):
+                    cli.cli()
+        except KeyboardInterrupt:
+            print("Exited CLI")
 
 if __name__ == "__main__":
     test = TestAPI()
@@ -85,3 +117,4 @@ if __name__ == "__main__":
     test.test_chat_without_web_search()
     test.test_chat_web_search()
     test.test_delete_all_conversations()
+    test.test_cli()
