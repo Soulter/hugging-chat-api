@@ -6,7 +6,7 @@ import os
 import logging
 from .hugchat import hugchat, cli
 from .hugchat.login import Login
-from sys import argv
+import sys
 from unittest.mock import patch
 
 logging.basicConfig(level=logging.DEBUG)
@@ -90,24 +90,22 @@ class TestAPI(object):
             # "/new",
             # "/ids",
             # "/sharewithauthor off"
+            "/exit"
         ]
         def input_callback(_):
             global times_run
             times_run += 1
 
-            if times_run >= len(return_strings):
-                raise KeyboardInterrupt()
-
             return return_strings[times_run]
         
-        argv.append("-u")
-        argv.append(EMAIL)
-        try:
-            with patch("getpass.getpass", side_effect=lambda _: PASSWORD):
-                with patch('builtins.input', side_effect=input_callback):
-                    cli.cli()
-        except KeyboardInterrupt:
-            print("Exited CLI")
+        sys.argv = [sys.argv[0]]
+
+        sys.argv.append("-u")
+        sys.argv.append(EMAIL)
+
+        with patch("getpass.getpass", side_effect=lambda _: PASSWORD):
+            with patch('builtins.input', side_effect=input_callback):
+                cli.cli()
 
 if __name__ == "__main__":
     test = TestAPI()
