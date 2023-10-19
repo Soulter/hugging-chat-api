@@ -20,11 +20,14 @@ class WebSearchSource:
     hostname: str
 
     def __str__(self):
-        return json.dumps({
-            "title": self.title,
-            "link": self.link,
-            "hostname": self.hostname,
-        })
+        return json.dumps(
+            {
+                "title": self.title,
+                "link": self.link,
+                "hostname": self.hostname,
+            }
+        )
+
 
 class Message(Generator):
     """
@@ -33,7 +36,7 @@ class Message(Generator):
         * _stream_yield_all: bool = False
         * web_search: bool = False
         - web_search_sources: list[WebSearchSource] = list()
-        - text: str = "" 
+        - text: str = ""
         - web_search_done: bool = not web_search
         - msg_status: int = MSGSTATUS_PENDING
         - error: Union[Exception, None] = None
@@ -42,7 +45,7 @@ class Message(Generator):
 
     :Example:
     .. code-block:: python
-        
+
         msg = bot.chat(...)
 
         # stream process
@@ -55,12 +58,13 @@ class Message(Generator):
         # or simply use:
         final = msg.wait_until_done()
     """
+
     g: Generator
     _stream_yield_all: bool = False
     web_search: bool = False
 
     web_search_sources: list = []
-    text: str = "" # For backward compatibility, we have to reserve the `text` field.
+    text: str = ""  # For backward compatibility, we have to reserve the `text` field.
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
     error: Union[Exception, None] = None
@@ -75,12 +79,25 @@ class Message(Generator):
         self._stream_yield_all = _stream_yield_all
         self.web_search = web_search
 
+    def _filterResponse(self, obj: dict):
+        if not obj.__contains__("type"):
+            if obj.__contains__("message"):
+                raise ChatError(f"Server returns an error: {obj['message']}")
+            else:
+                raise ChatError(f"No `type` and `message` returned: {obj}")
+
     def __next__(self) -> dict:
-        if self.msg_status:
+        if self.msg_status == MSGSTATUS_RESOLVED:
             raise StopIteration
+        elif self.msg_status == MSGSTATUS_REJECTED:
+            if self.error is not None:
+                raise self.error
+            else:
+                raise Exception("Message stauts is `Rejected` but no error found")
 
         try:
             a: dict = next(self.g)
+            self._filterResponse(a)
             t: str = a["type"]
             message_type: str = ""
             if "messageType" in a:
@@ -129,7 +146,7 @@ class Message(Generator):
             # print("meet error: ", str(e))
             self.error = e
             self.msg_status = MSGSTATUS_REJECTED
-            raise StopIteration
+            raise self.error
 
     def __iter__(self):
         return self
@@ -137,8 +154,8 @@ class Message(Generator):
     def throw(
         self,
         __typ,
-        __val = None,
-        __tb = None,
+        __val=None,
+        __tb=None,
     ):
         return self.g.throw(__typ, __val, __tb)
 
@@ -151,7 +168,6 @@ class Message(Generator):
             - self.text
         """
         return self.text
-
 
     def get_search_sources(self) -> list:
         """
@@ -182,7 +198,7 @@ class Message(Generator):
             raise self.error
         else:
             raise Exception("Rejected but no error captured!")
-    
+
     def is_done(self):
         """
         :Return:
@@ -225,15 +241,16 @@ class Message(Generator):
     def __add__(self, other: str) -> str:
         self.wait_until_done()
         return self.text + other
-    
+
     def __radd__(self, other: str) -> str:
         self.wait_until_done()
         return other + self.text
-    
+
     def __iadd__(self, other: str) -> str:
         self.wait_until_done()
         self.text += other
         return self.text
+
 
 if __name__ == "__main__":
     pass
