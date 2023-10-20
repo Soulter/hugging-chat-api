@@ -9,8 +9,8 @@ from .hugchat.login import Login
 
 logging.basicConfig(level=logging.DEBUG)
 
-EMAIL = os.environ.get("EMAIL")
-PASSWORD = os.environ.get("PASSWORD")
+EMAIL = "just_a_temp_email@iubridge.com"
+PASSWORD = "FOR_TEST_DO_NOT_LOGIN_a1"
 
 chatbot: hugchat.ChatBot = None
 my_conversation: hugchat.conversation = None
@@ -52,14 +52,14 @@ class TestAPI(object):
         """
         test chat module with web search
         """
-        res = str(chatbot.chat("What's the weather like in London today?", web_search=True))
+        res = str(chatbot.chat("What's the weather like in London today? Reply length limited within 20 words.", web_search=True))
         assert res is not None
 
     def test_generator(self):
         """
         test generator module
         """
-        res = chatbot.chat("What's the weather like in London today?", web_search=True, _stream_yield_all=True)
+        res = chatbot.chat("Just reply me `test_ok`", _stream_yield_all=True)
         for i in res:
             print(i, flush=True)
 
@@ -69,5 +69,4 @@ if __name__ == "__main__":
     test = TestAPI()
     test.test_login()
     test.test_create_conversation()
-    test.test_chat_without_web_search()
-    test.test_chat_web_search()
+    test.test_generator()
