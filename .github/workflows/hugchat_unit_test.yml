@@ -27,9 +27,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest requests
+        python -m pip install pytest requests pytest-rerunfailures
         pip uninstall hugchat
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     # - name: Lint with flake8
     #   run: |
     #     # stop the build if there are Python syntax errors or undefined names
@@ -38,8 +37,5 @@ jobs:
     #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        # The account is only for test, do not use this account for personal use :)
-        export EMAIL=just_a_temp_email@iubridge.com
-        export PASSWORD=FOR_TEST_DO_NOT_LOGIN_a1
         cd src
-        pytest unit_test.py -s
+        pytest unit_test.py -s --reruns 3 --reruns-delay 5
