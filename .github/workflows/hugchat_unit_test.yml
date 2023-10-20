@@ -38,7 +38,8 @@ jobs:
     #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        export EMAIL=${{ secrets.EMAIL }}
-        export PASSWORD=${{ secrets.PASSWORD }}
+        # The account is only for test, do not use this account for personal use :)
+        export EMAIL=just_a_temp_email@iubridge.com
+        export PASSWORD=FOR_TEST_DO_NOT_LOGIN_a1
         cd src
         pytest unit_test.py -s
