@@ -336,7 +336,7 @@ class ChatBot:
         self.conversation_list = []
         self.current_conversation = None
 
-    def delete_conversation(self, conversation_object: conversation = None) -> bool:
+    def delete_conversation(self, conversation_object: conversation = None) -> None:
         """
         Delete a HuggingChat conversation by conversation.
         """
