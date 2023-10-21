@@ -13,18 +13,19 @@ from requests.sessions import RequestsCookieJar
 from .message import Message
 from .exceptions import *
 
+
 class conversation:
     def __init__(
         self,
         id: str = None,
         title: str = None,
-        model = None,
+        model=None,
         system_prompt: str = None,
-        history: list = []
+        history: list = [],
     ):
-        '''
+        """
         Returns a conversation object
-        '''
+        """
 
         self.id: str = id
         self.title: str = title
@@ -35,26 +36,25 @@ class conversation:
     def __str__(self) -> str:
         return self.id
 
+
 class model:
     def __init__(
         self,
         id: str = None,
         name: str = None,
         displayName: str = None,
-
         preprompt: str = None,
         promptExamples: list = None,
         websiteUrl: str = None,
         description: str = None,
-
         datasetName: str = None,
         datasetUrl: str = None,
         modelUrl: str = None,
-        parameters: dict = None
+        parameters: dict = None,
     ):
-        '''
+        """
         Returns a model object
-        '''
+        """
 
         self.id: str = id
         self.name: str = name
@@ -73,6 +73,7 @@ class model:
     def __str__(self) -> str:
         return self.id
 
+
 class ChatBot:
     cookies: dict
     """Cookies for authentication"""
@@ -85,7 +86,7 @@ class ChatBot:
         cookies: Union[dict, None, RequestsCookieJar] = None,
         cookie_path: str = "",
         default_llm: Union[int, str] = 0,
-        system_prompt: str = ""
+        system_prompt: str = "",
     ) -> None:
         """
         Returns a ChatBot object
@@ -117,14 +118,18 @@ class ChatBot:
         self.session = self.get_hc_session()
         self.conversation_list = []
         self.__not_summarize_cids = []
-        self.accepted_welcome_modal = False # It is no longer required to accept the welcome modal
+        self.accepted_welcome_modal = (
+            False  # It is no longer required to accept the welcome modal
+        )
 
         self.llms = self.get_remote_llms()
 
         if type(default_llm) == str:
             self.active_model = self.get_llm_from_name(default_llm)
             if self.active_model is None:
-                raise Exception(f"Given model is not in llms list. LLM list: {[model.id for model in self.llms]}")
+                raise Exception(
+                    f"Given model is not in llms list. LLM list: {[model.id for model in self.llms]}"
+                )
         else:
             self.active_model = self.llms[default_llm]
 
@@ -172,7 +177,7 @@ class ChatBot:
     # Returns a pointer to this objects list that contains id of conversations.
     def get_conversation_list(self) -> list:
         return list(self.conversation_list)
-    
+
     def get_active_llm_index(self) -> int:
         return self.llms.index(self.active_model)
 
@@ -199,12 +204,13 @@ class ChatBot:
             )
 
         return True
-      
-      
-    def new_conversation(self, modelIndex: int = None, system_prompt: str = "", switch_to: bool = False) -> str:
-        '''
+
+    def new_conversation(
+        self, modelIndex: int = None, system_prompt: str = "", switch_to: bool = False
+    ) -> str:
+        """
         Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
-        '''
+        """
         err_count = 0
 
         if modelIndex == None:
@@ -212,7 +218,7 @@ class ChatBot:
         else:
             if modelIndex < 0 or modelIndex >= len(self.llms):
                 raise IndexError("Out of range of llm index")
-            
+
             model = self.llms[modelIndex]
 
         # Accept the welcome modal when init.
@@ -230,23 +236,30 @@ class ChatBot:
             try:
                 resp = self.session.post(
                     self.hf_base_url + "/chat/conversation",
-                    json={"model": model.id, "preprompt": system_prompt if system_prompt != "" else model.preprompt},
+                    json={
+                        "model": model.id,
+                        "preprompt": system_prompt
+                        if system_prompt != ""
+                        else model.preprompt,
+                    },
                     headers=_header,
-                    cookies = self.get_cookies()
+                    cookies=self.get_cookies(),
                 )
-                
+
                 logging.debug(resp.text)
-                cid = json.loads(resp.text)['conversationId']
+                cid = json.loads(resp.text)["conversationId"]
 
                 c = conversation(id=cid, system_prompt=system_prompt, model=model)
 
                 self.conversation_list.append(c)
-                self.__not_summarize_cids.append(cid) # For the 1st chat, the conversation needs to be summarized.
-                self.__preserve_context(cid = cid, ending = "1_1")
+                self.__not_summarize_cids.append(
+                    cid
+                )  # For the 1st chat, the conversation needs to be summarized.
+                self.__preserve_context(cid=cid, ending="1_1")
 
                 if switch_to:
                     self.change_conversation(c)
-                
+
                 return c
 
             except BaseException as e:
@@ -261,28 +274,34 @@ class ChatBot:
                 continue
 
     def change_conversation(self, conversation_object: conversation) -> bool:
-        '''
+        """
         Change the current conversation to another one. Need a valid conversation id.
-        '''
+        """
 
         for conversation in self.conversation_list:
             if conversation.id == conversation_object.id:
                 self.current_conversation = conversation_object
                 return True
 
-        raise InvalidConversationIDError("Invalid conversation id, not in conversation list.")
-    
+        raise InvalidConversationIDError(
+            "Invalid conversation id, not in conversation list."
+        )
+
     def share_conversation(self, conversation_object: conversation = None) -> str:
-        '''
+        """
         Return a share link of the conversation.
-        '''
+        """
         if conversation_object is None:
             conversation_object = self.current_conversation
 
         headers = self.get_headers()
-        
-        r = self.session.post(f"{self.hf_base_url}/chat/conversation/{conversation_object}/share", headers=headers, cookies=self.get_cookies())
-        
+
+        r = self.session.post(
+            f"{self.hf_base_url}/chat/conversation/{conversation_object}/share",
+            headers=headers,
+            cookies=self.get_cookies(),
+        )
+
         if r.status_code != 200:
             raise Exception(
                 f"Failed to share conversation with status code: {r.status_code}"
@@ -293,21 +312,27 @@ class ChatBot:
             return response["url"]
 
         raise Exception(f"Unknown server response: {response}")
-    
+
     def delete_all_conversations(self) -> None:
-        '''
+        """
         Deletes ALL conversations on the HuggingFace account
-        '''
+        """
 
-        settings = {
-            "": ("", "")
-        }
+        settings = {"": ("", "")}
 
-        r = self.session.post(f"{self.hf_base_url}/chat/conversations?/delete", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
+        r = self.session.post(
+            f"{self.hf_base_url}/chat/conversations?/delete",
+            headers={"Referer": "https://huggingface.co/chat"},
+            cookies=self.get_cookies(),
+            allow_redirects=True,
+            files=settings,
+        )
 
         if r.status_code != 200:
-            raise DeleteConversationError(f"Failed to delete ALL conversations with status code: {r.status_code}")
-        
+            raise DeleteConversationError(
+                f"Failed to delete ALL conversations with status code: {r.status_code}"
+            )
+
         self.conversation_list = []
         self.current_conversation = None
 
@@ -321,18 +346,24 @@ class ChatBot:
 
         headers = self.get_headers()
 
-        r = self.session.delete(f"{self.hf_base_url}/chat/conversation/{conversation_object}", headers=headers, cookies=self.get_cookies())
+        r = self.session.delete(
+            f"{self.hf_base_url}/chat/conversation/{conversation_object}",
+            headers=headers,
+            cookies=self.get_cookies(),
+        )
 
         if r.status_code != 200:
             raise DeleteConversationError(
                 f"Failed to delete conversation with status code: {r.status_code}"
             )
         else:
-            self.conversation_list.pop(self.conversation_list.index(conversation_object))
+            self.conversation_list.pop(
+                self.conversation_list.index(conversation_object)
+            )
 
             if conversation_object is self.current_conversation:
                 self.current_conversation = None
-            
+
     def get_available_llm_models(self) -> list:
         """
         Get all available models that are available in huggingface.co/chat.
@@ -343,14 +374,20 @@ class ChatBot:
         """
         Sets the "Share Conversation with Model Authors setting" to the given val variable
         """
-        settings = {
-            "shareConversationsWithModelAuthors": ("", "on" if val else "")
-        }
+        settings = {"shareConversationsWithModelAuthors": ("", "on" if val else "")}
 
-        r = self.session.post(self.hf_base_url + "/chat/settings", headers={ "Referer": "https://huggingface.co/chat" }, cookies=self.get_cookies(), allow_redirects=True, files=settings)
+        r = self.session.post(
+            self.hf_base_url + "/chat/settings",
+            headers={"Referer": "https://huggingface.co/chat"},
+            cookies=self.get_cookies(),
+            allow_redirects=True,
+            files=settings,
+        )
 
         if r.status_code != 200:
-            raise Exception(f"Failed to set share conversation with status code: {r.status_code}")
+            raise Exception(
+                f"Failed to set share conversation with status code: {r.status_code}"
+            )
 
     def switch_llm(self, index: int) -> bool:
         """
@@ -407,17 +444,23 @@ class ChatBot:
     # Gives information such as name, websiteUrl, description, displayName, parameters, etc.
     # We can use it in the future if we need to get information about models
     def get_remote_llms(self) -> list:
-        '''
+        """
         Fetches all possible LLMs that could be used. Returns the LLMs in a list
-        '''
-        
-        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+        """
+
+        r = self.session.post(
+            self.hf_base_url + f"/chat/__data.json",
+            headers=self.get_headers(ref=False),
+            cookies=self.get_cookies(),
+        )
 
         if r.status_code != 200:
-            raise Exception(f"Failed to get remote LLMs with status code: {r.status_code}")
-        
+            raise Exception(
+                f"Failed to get remote LLMs with status code: {r.status_code}"
+            )
+
         data = r.json()["nodes"][0]["data"]
-        modelsIndices = data[data[0]["models"]] 
+        modelsIndices = data[data[0]["models"]]
         model_list = []
 
         return_data_from_index = lambda index: None if index == -1 else data[index]
@@ -426,26 +469,29 @@ class ChatBot:
             model_data = data[modelIndex]
 
             m = model(
-                id = return_data_from_index(model_data["id"]),
-                name = return_data_from_index(model_data["name"]),
-                displayName = return_data_from_index(model_data["displayName"]),
-                
-                preprompt = return_data_from_index(model_data["preprompt"]),
+                id=return_data_from_index(model_data["id"]),
+                name=return_data_from_index(model_data["name"]),
+                displayName=return_data_from_index(model_data["displayName"]),
+                preprompt=return_data_from_index(model_data["preprompt"]),
                 # promptExamples = return_data_from_index(model_data["promptExamples"]),
-                websiteUrl = return_data_from_index(model_data["websiteUrl"]),
-                description = return_data_from_index(model_data["description"]),
-
-                datasetName = return_data_from_index(model_data["datasetName"]),
-                datasetUrl = return_data_from_index(model_data["datasetUrl"]),
-                modelUrl = return_data_from_index(model_data["modelUrl"]),
+                websiteUrl=return_data_from_index(model_data["websiteUrl"]),
+                description=return_data_from_index(model_data["description"]),
+                datasetName=return_data_from_index(model_data["datasetName"]),
+                datasetUrl=return_data_from_index(model_data["datasetUrl"]),
+                modelUrl=return_data_from_index(model_data["modelUrl"]),
                 # parameters = return_data_from_index(model_data["parameters"]),
             )
 
             prompt_list = return_data_from_index(model_data["promptExamples"])
             if prompt_list is not None:
-                _promptExamples = [return_data_from_index(index) for index in prompt_list]
-                m.promptExamples = [{ "title": data[prompt["title"]], "prompt": data[prompt["prompt"]] } for prompt in _promptExamples]
-            
+                _promptExamples = [
+                    return_data_from_index(index) for index in prompt_list
+                ]
+                m.promptExamples = [
+                    {"title": data[prompt["title"]], "prompt": data[prompt["prompt"]]}
+                    for prompt in _promptExamples
+                ]
+
             indices_parameters_dict = return_data_from_index(model_data["parameters"])
             out_parameters_dict = {}
             for key in indices_parameters_dict.keys():
@@ -460,22 +506,28 @@ class ChatBot:
                     continue
 
                 out_parameters_dict[key] = data[value]
-            
+
             m.parameters = out_parameters_dict
 
             model_list.append(m)
 
         return model_list
-    
-    def get_remote_conversations(self, replace_conversation_list=True):
-        '''
-        Returns all the remote conversations for the active account. Returns the conversations in a list.
-        '''
 
-        r = self.session.post(self.hf_base_url + f"/chat/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+    def get_remote_conversations(self, replace_conversation_list=True):
+        """
+        Returns all the remote conversations for the active account. Returns the conversations in a list.
+        """
+
+        r = self.session.post(
+            self.hf_base_url + f"/chat/__data.json",
+            headers=self.get_headers(ref=False),
+            cookies=self.get_cookies(),
+        )
 
         if r.status_code != 200:
-            raise Exception(f"Failed to get remote conversations with status code: {r.status_code}")
+            raise Exception(
+                f"Failed to get remote conversations with status code: {r.status_code}"
+            )
 
         data = r.json()["nodes"][0]["data"]
         conversationIndices = data[data[0]["conversations"]]
@@ -483,7 +535,11 @@ class ChatBot:
 
         for index in conversationIndices:
             conversation_data = data[index]
-            c = conversation(id=data[conversation_data["id"]], title=data[conversation_data["title"]], model=data[conversation_data["model"]])
+            c = conversation(
+                id=data[conversation_data["id"]],
+                title=data[conversation_data["title"]],
+                model=data[conversation_data["model"]],
+            )
 
             conversations.append(c)
 
@@ -491,19 +547,25 @@ class ChatBot:
             self.conversation_list = conversations
 
         return conversations
-    
+
     def get_conversation_info(self, conversation: conversation = None):
-        '''
+        """
         Fetches information related to the specified conversation. Returns the conversation object.
-        '''
-        
+        """
+
         if conversation is None:
             conversation = self.current_conversation
 
-        r = self.session.post(self.hf_base_url + f"/chat/conversation/{conversation.id}/__data.json", headers=self.get_headers(ref=False), cookies=self.get_cookies())
+        r = self.session.post(
+            self.hf_base_url + f"/chat/conversation/{conversation.id}/__data.json",
+            headers=self.get_headers(ref=False),
+            cookies=self.get_cookies(),
+        )
 
         if r.status_code != 200:
-            raise Exception(f"Failed to get conversation from id with status code: {r.status_code}")
+            raise Exception(
+                f"Failed to get conversation from id with status code: {r.status_code}"
+            )
 
         data = r.json()["nodes"][1]["data"]
 
@@ -513,7 +575,7 @@ class ChatBot:
 
         messages = data[data[0]["messages"]]
         conversation.history = []
-        
+
         for index in messages:
             message = data[data[index]["content"]].strip()
 
@@ -522,9 +584,9 @@ class ChatBot:
         return conversation
 
     def get_conversation_from_id(self, conversation_id: str) -> conversation:
-        '''
+        """
         Returns a conversation object from the given conversation_id.
-        '''
+        """
 
         c = conversation(id=conversation_id)
 
@@ -556,11 +618,11 @@ class ChatBot:
         is_retry: bool = False,
         retry_count: int = 5,
         _stream_yield_all: bool = False,  # yield all responses from the server.
-        conversation: conversation = None
+        conversation: conversation = None,
     ) -> typing.Generator[dict, None, None]:
         if conversation is None:
             conversation = self.current_conversation
-        
+
         if retry_count <= 0:
             raise Exception("the parameter retry_count must be greater than 0.")
         if text == "":
@@ -622,12 +684,15 @@ class ChatBot:
                         continue
                     res = line
                     obj = json.loads(res)
-                    _type = obj["type"]
+                    if obj.__contains__("type"):
+                        _type = obj["type"]
 
-                    if _type == "finalAnswer":
-                        last_obj = obj
-                        break_label = True
-                        break
+                        if _type == "finalAnswer":
+                            last_obj = obj
+                            break_label = True
+                            break
+                    else:
+                        logging.error(f"No `type` found in response: {obj}")
                     yield obj
                     # if _stream_yield_all:
                     # else:
@@ -686,7 +751,7 @@ class ChatBot:
         use_cache: bool = False,
         is_retry: bool = False,
         retry_count: int = 5,
-        conversation: conversation = None
+        conversation: conversation = None,
     ) -> Message:
         """
         **Deprecated**
@@ -696,11 +761,11 @@ class ChatBot:
             conversation = self.current_conversation
 
         return self.chat(
-            text = text,
-            web_search = web_search,
-            _stream_yield_all = _stream_yield_all,
-            retry_count = retry_count,
-            conversation = conversation
+            text=text,
+            web_search=web_search,
+            _stream_yield_all=_stream_yield_all,
+            retry_count=retry_count,
+            conversation=conversation,
         )
 
     def chat(
@@ -729,17 +794,17 @@ class ChatBot:
         """
         if conversation is None:
             conversation = self.current_conversation
-        
+
         msg = Message(
             g=self._stream_query(
-                text = text,
-                web_search = web_search,
-                _stream_yield_all = _stream_yield_all,  # For stream mode, yield all responses from the server.
-                retry_count = retry_count,
-                conversation = conversation
+                text=text,
+                web_search=web_search,
+                _stream_yield_all=_stream_yield_all,  # For stream mode, yield all responses from the server.
+                retry_count=retry_count,
+                conversation=conversation,
             ),
-            _stream_yield_all = _stream_yield_all,
-            web_search = web_search,
+            _stream_yield_all=_stream_yield_all,
+            web_search=web_search,
         )
         return msg
 
