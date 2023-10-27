@@ -11,7 +11,7 @@ from typing import Union
 from requests.sessions import RequestsCookieJar
 
 from .message import Message
-from .exceptions import *
+import exceptions
 
 
 class conversation:
@@ -92,16 +92,16 @@ class ChatBot:
         Returns a ChatBot object
         """
         if cookies is None and cookie_path == "":
-            raise ChatBotInitError(
+            raise exceptions.ChatBotInitError(
                 "Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api"
             )
         elif cookies is not None and cookie_path != "":
-            raise ChatBotInitError("Both cookies and cookie_path provided")
+            raise exceptions.ChatBotInitError("Both cookies and cookie_path provided")
 
         if cookies is None and cookie_path != "":
             # read cookies from path
             if not os.path.exists(cookie_path):
-                raise ChatBotInitError(
+                raise exceptions.ChatBotInitError(
                     f"Cookie file {cookie_path} not found. Note: The file must be in JSON format and must contain a list of cookies. See more at https://github.com/Soulter/hugging-chat-api"
                 )
             with open(cookie_path, "r", encoding="utf-8") as f:
@@ -124,7 +124,7 @@ class ChatBot:
 
         self.llms = self.get_remote_llms()
 
-        if type(default_llm) == str:
+        if isinstance(type(default_llm), str):
             self.active_model = self.get_llm_from_name(default_llm)
             if self.active_model is None:
                 raise Exception(
@@ -213,7 +213,7 @@ class ChatBot:
         """
         err_count = 0
 
-        if modelIndex == None:
+        if modelIndex is None:
             model = self.active_model
         else:
             if modelIndex < 0 or modelIndex >= len(self.llms):
@@ -265,11 +265,11 @@ class ChatBot:
             except BaseException as e:
                 err_count += 1
                 logging.debug(
-                    f" Failed to create new conversation. Retrying... ({err_count})"
+                    f" Failed to create new conversation ({e}). Retrying... ({err_count})"
                 )
                 if err_count > 5:
-                    raise CreateConversationError(
-                        f"Failed to create new conversation with status code: {resp.status_code}. ({err_count})"
+                    raise exceptions.CreateConversationError(
+                        f"Failed to create new conversation with status code: {resp.status_code}. Error: {e}. Retries: {err_count}."
                     )
                 continue
 
@@ -283,7 +283,7 @@ class ChatBot:
                 self.current_conversation = conversation_object
                 return True
 
-        raise InvalidConversationIDError(
+        raise exceptions.InvalidConversationIDError(
             "Invalid conversation id, not in conversation list."
         )
 
@@ -329,7 +329,7 @@ class ChatBot:
         )
 
         if r.status_code != 200:
-            raise DeleteConversationError(
+            raise exceptions.DeleteConversationError(
                 f"Failed to delete ALL conversations with status code: {r.status_code}"
             )
 
@@ -353,7 +353,7 @@ class ChatBot:
         )
 
         if r.status_code != 200:
-            raise DeleteConversationError(
+            raise exceptions.DeleteConversationError(
                 f"Failed to delete conversation with status code: {r.status_code}"
             )
         else:
@@ -449,7 +449,7 @@ class ChatBot:
         """
 
         r = self.session.post(
-            self.hf_base_url + f"/chat/__data.json",
+            self.hf_base_url + "/chat/__data.json",
             headers=self.get_headers(ref=False),
             cookies=self.get_cookies(),
         )
@@ -501,7 +501,7 @@ class ChatBot:
                     out_parameters_dict[key] = None
                     continue
 
-                if type(data[value]) == list:
+                if isinstance(type(data[value]), list):
                     out_parameters_dict[key] = [data[index] for index in data[value]]
                     continue
 
@@ -519,7 +519,7 @@ class ChatBot:
         """
 
         r = self.session.post(
-            self.hf_base_url + f"/chat/__data.json",
+            self.hf_base_url + "/chat/__data.json",
             headers=self.get_headers(ref=False),
             cookies=self.get_cookies(),
         )
@@ -676,7 +676,7 @@ class ChatBot:
             if resp.status_code != 200:
                 retry_count -= 1
                 if retry_count <= 0:
-                    raise ChatError(f"Failed to chat. ({resp.status_code})")
+                    raise exceptions.ChatError(f"Failed to chat. ({resp.status_code})")
 
             try:
                 for line in resp.iter_lines(decode_unicode=True):
@@ -715,11 +715,11 @@ class ChatBot:
             except BaseException as e:
                 traceback.print_exc()
                 if "Model is overloaded" in str(e):
-                    raise ModelOverloadedError(
+                    raise exceptions.ModelOverloadedError(
                         "Model is overloaded, please try again later or switch to another model."
                     )
                 logging.debug(resp.headers)
-                raise ChatError(f"Failed to parse response: {res}")
+                raise exceptions.ChatError(f"Failed to parse response: {res}")
             if break_label:
                 break
 

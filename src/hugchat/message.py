@@ -139,7 +139,7 @@ class Message(Generator):
                 return a
             else:
                 return self.__next__()
-        except StopIteration as e:
+        except StopIteration:
             # print("meet stop:", self.msg_status)
             pass
         except Exception as e:
@@ -194,7 +194,7 @@ class Message(Generator):
             self.__next__()
         if self.is_done() == MSGSTATUS_RESOLVED:
             return self.text
-        elif self.error != None:
+        elif self.error is not None:
             raise self.error
         else:
             raise Exception("Rejected but no error captured!")
