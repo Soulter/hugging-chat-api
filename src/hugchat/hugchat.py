@@ -11,7 +11,7 @@ from typing import Union
 from requests.sessions import RequestsCookieJar
 
 from .message import Message
-import exceptions
+from  . import exceptions
 
 
 class conversation:
