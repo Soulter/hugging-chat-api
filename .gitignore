@@ -9,4 +9,5 @@ dist/*
 usercookies/
 fortest/
 .mypy_cache
+.vscode/
 build/

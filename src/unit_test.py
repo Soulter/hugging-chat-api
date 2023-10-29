@@ -2,7 +2,7 @@
 For test hugchat
 """
 
-import os
+# import os
 import logging
 from .hugchat import hugchat, cli
 from .hugchat.login import Login
@@ -16,6 +16,7 @@ PASSWORD = "FOR_TEST_DO_NOT_LOGIN_a1"
 
 chatbot: hugchat.ChatBot = None
 my_conversation: hugchat.conversation = None
+
 
 class TestAPI(object):
     """
@@ -42,7 +43,7 @@ class TestAPI(object):
         chatbot.change_conversation(res)
         my_conversation = res
         print("Test create conversation:", str(res))
-    
+
     def test_chat_without_web_search(self):
         """
         test chat module without web search
@@ -66,7 +67,7 @@ class TestAPI(object):
             print(i, flush=True)
 
         assert res is not None
-    
+
     # def test_delete_conversation(self):
     #     """
     #     test delete conversation module
@@ -78,7 +79,7 @@ class TestAPI(object):
         test delete all conversations module
         """
         chatbot.delete_all_conversations()
-    
+
     def test_cli(self):
         global times_run
         times_run = -1
@@ -92,12 +93,13 @@ class TestAPI(object):
             # "/sharewithauthor off"
             "/exit"
         ]
+
         def input_callback(_):
             global times_run
             times_run += 1
 
             return return_strings[times_run]
-        
+
         sys.argv = [sys.argv[0]]
 
         sys.argv.append("-u")
@@ -106,6 +108,7 @@ class TestAPI(object):
         with patch("getpass.getpass", side_effect=lambda _: PASSWORD):
             with patch('builtins.input', side_effect=input_callback):
                 cli.cli()
+
 
 if __name__ == "__main__":
     test = TestAPI()

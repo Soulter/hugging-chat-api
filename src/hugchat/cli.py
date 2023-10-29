@@ -1,6 +1,6 @@
 """Entry for the hugchat command line interface.
 
-simply type 
+simply type
 ```bash
 python -m hugchat.cli
 ```
@@ -59,7 +59,7 @@ def cli():
         try:
             if email:
                 cookies = Login(email).loadCookiesFromDir()
-        except Exception as e:
+        except Exception:
             pass
     if not cookies or inputpass:
         if not email:
@@ -75,7 +75,7 @@ def cli():
                 passwd = getpass.getpass("Password: ")
             else:
                 passwd = PASSWD
-        
+
         print(f"Sign in as :{email}")
         sign = Login(email, passwd)
         try:
@@ -85,24 +85,24 @@ def cli():
             print("Logging in...")
             cookies = sign.login()
             sign.saveCookiesToDir()
-    
+
     chatbot = ChatBot(cookies=cookies)
     running = True
     is_web_search = False
     web_search_hint = False
-    
+
     print("Login successfully🎉 You can input `/help` to open the command menu.")
 
     while running:
         question = input("> ")
-        
+
         if question == "/new":
             cid = chatbot.new_conversation()
             print("The new conversation ID is: " + cid)
             chatbot.change_conversation(cid)
             print("Conversation changed successfully.")
             continue
-        
+
         elif question.startswith("/switch"):
             try:
                 conversations = chatbot.get_conversation_list()
@@ -111,7 +111,7 @@ def cli():
                     conversation_id = int(conversation_id)
                 except Exception:
                     pass
-                if type(conversation_id) == int:
+                if isinstance(conversation_id, int):
                     if conversation_id <= len(conversations) and conversation_id > 0:
                         new_conversation_id = conversations[conversation_id-1]
                         if chatbot.current_conversation != new_conversation_id:
@@ -132,7 +132,7 @@ def cli():
                         print(f"# Conversation switched successfully to {conversation_id}")
             except ValueError:
                 print("# Please enter a valid ID number")
-        
+
         elif question.startswith("/del"):
             try:
                 conversations = chatbot.get_conversation_list()
@@ -141,12 +141,12 @@ def cli():
                     conversation_id = int(conversation_id)
                 except Exception:
                     pass
-                if type(conversation_id) == int:
+                if isinstance(conversation_id, int):
                     if conversation_id <= len(conversations) and conversation_id > 0:
                         new_conversation_id = conversations[conversation_id-1]
                         if chatbot.current_conversation != new_conversation_id:
                             chatbot.delete_conversation(new_conversation_id)
-                            print(f"# Conversations successfully deleted")
+                            print("# Conversations successfully deleted")
                         else:
                             print("# Cannot delete active session")
                     else:
@@ -159,7 +159,7 @@ def cli():
                         print("# Cannot delete active session")
                     else:
                         chatbot.delete_conversation(conversation_id)
-                        print(f"# Conversation successfully deleted")
+                        print("# Conversation successfully deleted")
             except ValueError:
                 print("# Please enter a valid ID number")
 
@@ -167,10 +167,10 @@ def cli():
             id_list = list(chatbot.get_conversation_list())
             [print(f"# {id_list.index(i) + 1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in
              id_list]
-        
+
         elif question in ["/exit", "/quit", "/close"]:
             running = False
-        
+
         elif question.startswith("/llm"):
             command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
             llms = chatbot.get_available_llm_models()
@@ -196,7 +196,7 @@ def cli():
         elif question.startswith("/sharewithauthor"):
             command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
             if command:
-                if command in ["on","off"]:
+                if command in ["on", "off"]:
                     chatbot.set_share_conversations(True if command == "on" else False)
                 else:
                     print('# Invalid argument. Expected "on" or "off"')
@@ -229,7 +229,7 @@ def cli():
         elif question.startswith("/web-hint"):
             command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
             if command:
-                if command in ["on","off"]:
+                if command in ["on", "off"]:
                     web_search_hint = True if command == "on" else False
                     print(f"# Web search hint {'enabled' if web_search_hint else 'disabled'}")
                 else:
@@ -240,7 +240,7 @@ def cli():
         elif question.startswith("/web"):
             command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
             if command:
-                if command in ["on","off"]:
+                if command in ["on", "off"]:
                     is_web_search = True if command == "on" else False
                     print(f"# Web search {'enabled' if is_web_search else 'disabled'}")
                 else:
@@ -251,7 +251,7 @@ def cli():
         elif question.startswith("/stream"):
             command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
             if command:
-                if command in ["on","off"]:
+                if command in ["on", "off"]:
                     streamoutput = True if command == "on" else False
                     print(f"# Streaming mode {'enabled' if streamoutput else 'disabled'}")
                 else:
@@ -261,7 +261,7 @@ def cli():
 
         elif question.startswith("/"):
             print("# Invalid command")
-        
+
         else:
             try:
                 res = chatbot.chat(question, stream=True, _stream_yield_all=True, web_search=is_web_search)
@@ -278,7 +278,7 @@ def cli():
                         print(chunk['token'], end="", flush=True)
 
                 if web_search_hint and len(sources) > 0:
-                    print(f"\nSources:")
+                    print("\nSources:")
                     for i in range(len(sources)):
                         print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
                 print()

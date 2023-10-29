@@ -15,7 +15,7 @@ class Login:
         # logging.debug(f"Cookie store path: {self.COOKIE_DIR}")
         self.DEFAULT_PATH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usercookies")
         self.DEFAULT_COOKIE_PATH = self.DEFAULT_PATH_DIR + os.path.join(f"{email}.json")
-        
+
         self.email: str = email
         self.passwd: str = passwd
         self.headers = {
@@ -23,7 +23,7 @@ class Login:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.64",
         }
         self.cookies = requests.sessions.RequestsCookieJar()
-    
+
     def requestsGet(self, url: str, params=None, allow_redirects=True) -> requests.Response:
         res = requests.get(
             url,
@@ -34,7 +34,7 @@ class Login:
         )
         self.refreshCookies(res.cookies)
         return res
-    
+
     def requestsPost(self, url: str, headers=None, params=None, data=None, stream=False,
                      allow_redirects=True) -> requests.Response:
         res = requests.post(
@@ -42,18 +42,18 @@ class Login:
             stream=stream,
             params=params,
             data=data,
-            headers=self.headers if headers == None else headers,
+            headers=self.headers if headers is None else headers,
             cookies=self.cookies,
             allow_redirects=allow_redirects
         )
         self.refreshCookies(res.cookies)
         return res
-    
+
     def refreshCookies(self, cookies: requests.sessions.RequestsCookieJar):
         dic = cookies.get_dict()
         for i in dic:
             self.cookies.set(i, dic[i])
-    
+
     def SigninWithEmail(self):
         """
         Login through your email and password.
@@ -68,7 +68,7 @@ class Login:
         res = self.requestsPost(url=url, data=data, allow_redirects=False)
         if res.status_code == 400:
             raise Exception("wrong username or password")
-    
+
     def getAuthURL(self):
         url = "https://huggingface.co/chat/login"
         headers = {
@@ -92,7 +92,7 @@ class Login:
                 raise Exception("No authorize url found, please check your email or password.")
         else:
             raise Exception("Something went wrong!")
-    
+
     def grantAuth(self, url: str) -> int:
         res = self.requestsGet(url, allow_redirects=False)
         if res.headers.__contains__("location"):
@@ -120,7 +120,7 @@ class Login:
             raise Exception(f"get hf-chat cookie fatal! - {res.status_code}")
         else:
             return 1
-    
+
     def login(self) -> requests.sessions.RequestsCookieJar:
         self.SigninWithEmail()
         location = self.getAuthURL()
@@ -128,7 +128,7 @@ class Login:
             return self.cookies
         else:
             raise Exception(f"Grant auth fatal, please check your email or password\ncookies gained: \n{self.cookies}")
-    
+
     def saveCookiesToDir(self, cookie_dir_path: str = None) -> str:
         """
         cookies will be saved into: cookie_dir_path/<email>.json
@@ -141,11 +141,11 @@ class Login:
             logging.info("Cookie directory not exist, creating...")
             os.makedirs(cookie_dir_path)
         logging.info(f"Cookie store path: {cookie_path}")
-        
+
         with open(cookie_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(self.cookies.get_dict()))
         return cookie_path
-    
+
     def _getCookiePath(self, cookie_dir_path) -> str:
         if not cookie_dir_path.endswith("/"):
             cookie_dir_path += "/"
@@ -156,7 +156,7 @@ class Login:
             if i == f"{self.email}.json":
                 return cookie_dir_path + i
         return ""
-    
+
     def loadCookiesFromDir(self, cookie_dir_path: str = None) -> requests.sessions.RequestsCookieJar:
         """
         cookie files needs to be named as: cookie_dir_path/<email>.json
@@ -166,7 +166,7 @@ class Login:
         if not cookie_path:
             raise Exception(f"Cookie not found. please check the path given: {cookie_dir_path}.\n" +
                             f"Cookie file must be named like this: 'your_email'+'.json': '{self.email}.json'")
-        
+
         with open(cookie_path, "r", encoding="utf-8") as f:
             try:
                 js = json.loads(f.read())

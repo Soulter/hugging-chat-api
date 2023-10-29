@@ -1,8 +1,8 @@
 class ModelOverloadedError(Exception):
     """
     HF Model Overloaded Error
-    
-    Raised when hf return response `{"error":"Model is overloaded","error_type":"overloaded"}`
+
+    Raised when hf return response `{"error":"Model is overloaded", "error_type":"overloaded"}`
     """
     pass
 
@@ -10,7 +10,7 @@ class ModelOverloadedError(Exception):
 class ChatBotInitError(Exception):
     """
     ChatBot Init Error
-    
+
     Raised when chatbot init failed
     """
     pass
@@ -19,7 +19,7 @@ class ChatBotInitError(Exception):
 class CreateConversationError(Exception):
     """
     Create Conversation Error
-    
+
     Raised when create conversation failed
     """
     pass
@@ -28,7 +28,7 @@ class CreateConversationError(Exception):
 class InvalidConversationIDError(Exception):
     """
     Invalid Conversation ID Error
-    
+
     Raised when using a invalid conversation id
     """
     pass
@@ -37,7 +37,7 @@ class InvalidConversationIDError(Exception):
 class DeleteConversationError(Exception):
     """
     Delete Conversation Error
-    
+
     Raised when delete conversation failed
     """
     pass
@@ -46,7 +46,7 @@ class DeleteConversationError(Exception):
 class ChatError(Exception):
     """
     Chat Error
-    
+
     Raised when chat failed
     """
     pass
