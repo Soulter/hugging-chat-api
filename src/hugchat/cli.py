@@ -98,7 +98,7 @@ def cli():
 
         if question == "/new":
             cid = chatbot.new_conversation()
-            print("The new conversation ID is: " + cid)
+            print("The new conversation ID is: " + str(cid))
             chatbot.change_conversation(cid)
             print("Conversation changed successfully.")
             continue
