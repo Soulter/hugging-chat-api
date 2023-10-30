@@ -163,6 +163,13 @@ def cli():
             except ValueError:
                 print("# Please enter a valid ID number")
 
+        elif question.startswith("/del-all"):
+            try:
+                chatbot.delete_all_conversations()
+                print("# All conversations successfully deleted")
+            except ValueError:
+                print("# Could not delete all conversations")
+
         elif question == "/ids":
             id_list = list(chatbot.get_conversation_list())
             [print(f"# {id_list.index(i) + 1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in
