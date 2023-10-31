@@ -4,11 +4,16 @@
 
 为聊天机器人等程序打造的非官方的 HuggingChat Python API。
 
-[![PyPi](https://img.shields.io/pypi/v/hugchat.svg)](https://pypi.python.org/pypi/hugchat)
-[![Support_Platform](https://img.shields.io/pypi/pyversions/hugchat)](https://pypi.python.org/pypi/hugchat)
-[![Downloads](https://static.pepy.tech/badge/hugchat)](https://pypi.python.org/pypi/hugchat)
+[![PyPi](https://img.shields.io/pypi/v/hugchat.svg?logo=pypi&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![Support_Platform](https://img.shields.io/badge/3.6+-%234ea94b.svg?logo=python&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![DownloadsPW](https://img.shields.io/pypi/dw/hugchat?logo=download&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![Status](https://img.shields.io/badge/status-operational-%234ea94b.svg?logo=ok&logoColor=white)](https://pypi.python.org/pypi/hugchat)
+[![Downloads](https://static.pepy.tech/badge/hugchat?logo=download&logoColor=white)](https://www.pepy.tech/projects/hugchat)
 
-> **Note**  
+> **Note**
+>
+> 某些较新的版本可能包含不向后兼容的更新，建议在出现问题时查看此 README 或 issues。 
+>  
 > 近期更新
 > - 联网搜索
 > - 上下文记忆  
@@ -28,6 +33,7 @@ pip3 install hugchat
 
 ### API
 
+以下展示了本库的常见用法，您不一定需要全部使用，可以根据需要添加或删除一些 :)
 
 ```py
 from hugchat import hugchat
@@ -80,6 +86,12 @@ models = chatbot.get_available_llm_models()
 # 切换模型
 chatbot.switch_llm(0) # 切换到第一个模型
 chatbot.switch_llm(1) # 切换到第二个模型
+
+# 从服务器获取所有回话列表
+chatbot.get_remote_conversations(replace_conversation_list=True)
+
+# [慎用]删除所有回话
+chatbot.delete_all_conversations()
 ```
 
 
