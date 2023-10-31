@@ -127,6 +127,7 @@ Commands in cli mode:
 - `/ids` : Shows a list of all ID numbers and ID strings in current session.
 - `/switch <id>` : Switches to the ID number or ID string passed.
 - `/del <id>` : Deletes the ID number or ID string passed. Will not delete active session.
+- `/delete-all` : Deletes all the conversations for the logged in user.
 - `/clear` : Clear the terminal.
 - `/llm` : Get available models you can switch to.
 - `/llm <index>` : Switches model to given model index based on `/llm`.
