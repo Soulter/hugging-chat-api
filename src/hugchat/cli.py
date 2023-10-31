@@ -133,7 +133,7 @@ def cli():
             except ValueError:
                 print("# Please enter a valid ID number")
 
-        elif question.startswith("/del"):
+        elif question.startswith("/del") & (not question == "/delete-all"):
             try:
                 conversations = chatbot.get_conversation_list()
                 conversation_id = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
@@ -162,6 +162,13 @@ def cli():
                         print("# Conversation successfully deleted")
             except ValueError:
                 print("# Please enter a valid ID number")
+
+        elif question == "/delete-all":
+            try:
+                chatbot.delete_all_conversations()
+                print("# All conversations successfully deleted")
+            except ValueError:
+                print("# Could not delete all conversations")
 
         elif question == "/ids":
             id_list = list(chatbot.get_conversation_list())
@@ -217,6 +224,7 @@ def cli():
                     "/ids : Shows a list of all ID numbers and ID strings in current session.\n"
                     "/switch <id> : Switches to the ID number or ID string passed.\n"
                     "/del <id> : Deletes the ID number or ID string passed. Will not delete active session.\n"
+                    "/delete-all : [DANGER] Deletes all the conversations for the logged in user.\n"
                     "/clear : Clear the terminal.\n"
                     "/llm : Get available models you can switch to.\n"
                     "/llm <index> : Switches model to given model index based on /llm.\n"
