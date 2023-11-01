@@ -99,13 +99,12 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
             return
 
         try:
-            to_switch_to_llm = chatbot.switch_llm(int(arguments[0]))
+            chatbot.switch_llm(int(arguments[0]))
         except ValueError:
             print("# Invalid LLM index")
             return
 
-        chatbot.switch_llm(to_switch_to_llm)
-        print(f"# Switched to LLM {chatbot.get_available_llm_models()[to_switch_to_llm].id}\n# Please note that you have to create a new conversation for this to take effect")
+        print(f"# Switched to LLM {chatbot.active_model.id}\n# Please note that you have to create a new conversation for this to take effect")
 
     elif command == "sharewithauthor":
         sharing = arguments[0] == "on"
@@ -227,7 +226,7 @@ Continuing to use means that you accept the above point(s)
         cookies = sign.login()
         sign.saveCookiesToDir()
 
-    print(f"Signed in as {EMAIL}")
+    print(f"Signed in as {EMAIL} .. attempting to login")
 
     chatbot = ChatBot(cookies=cookies)
 
