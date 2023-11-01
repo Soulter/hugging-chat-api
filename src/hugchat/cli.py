@@ -14,21 +14,159 @@ import argparse
 import os
 import traceback
 
-EMAIL = os.getenv("EMAIL")
-PASSWD = os.getenv("PASSWD")
-CHECK_BEFORE_PASSWORD = True
+ENVIRONMENT_EMAIL = os.getenv("EMAIL")
+ENVIRONMENT_PASSWORD = os.getenv("PASSWD")
+stream_output = False
+is_web_search = False
+web_search_hint = False
 
+EXIT_COMMANDS = [
+    "/exit",
+    "/quit",
+    "/stop",
+    "/close"
+]
 
 # COOKIE_PATH_DIR = os.path.abspath(os.path.dirname(__file__)) + "/usercookies"
 
-def cli():
-    global EMAIL
-    global PASSWD
-    global CHECK_BEFORE_PASSWORD
-    print("-------HuggingChat-------")
-    print("Official Site: https://huggingface.co/chat")
-    print(
-        "1. AI is an area of active research with known problems such as biased generation and misinformation.\n2. Do not use this application for high-stakes decisions or advice.\nContinuing to use means that you accept the above point(s)")
+
+def handle_command(chatbot: ChatBot, userInput: str) -> None:
+    global stream_output, is_web_search, web_search_hint
+
+    arguments = userInput.lower().split(" ")
+    command = arguments[0][1:] # Remove the '/' at the start of the input
+    arguments = arguments[1:]
+
+    if command == "help" or command == "commands":
+        print("""
+/new: Create and switch to a new conversation.
+/ids: Shows a list of all ID numbers and ID strings in current session.
+/switch <id>: Switches to the ID number or ID string passed.
+/del <id>: Deletes the ID number or ID string passed. Will not delete active session.
+/delete-all: Deletes all the conversations for the logged in user.
+/clear: Clear the terminal.
+/llm: Get available models you can switch to.
+/llm <index>: Switches model to given model index based on /llm.
+/sharewithauthor <on|off>: Changes settings for sharing data with model author. On by default.
+/exit : Closes CLI environment.
+/stream <on|off>: streaming the response.
+/web <on|off>: web search.
+/web-hint <on|off>: display web search hint.
+        """)
+
+    elif command == "new":
+        new_conversation = chatbot.new_conversation(switch_to=True)
+        print(f"# Created and switched to a new conversation\n# New conversation ID: {new_conversation.id}")
+
+    elif command == "ids":
+        print(f"# Conversations: {[conversation.id for conversation in chatbot.get_conversation_list()]}")
+
+    elif command == "switch":
+        try:
+            to_switch_conversation = chatbot.get_conversation_from_id(arguments[0])
+        except Exception:
+            print("# Unable to switch conversation to ID. Conversation ID not found.")
+            return
+
+        chatbot.change_conversation(to_switch_conversation)
+
+        print("# Change active conversation successfully")
+
+    elif command == "del" or command == "delete":
+        try:
+            to_delete_conversation = chatbot.get_conversation_from_id(arguments[0])
+        except Exception:
+            print("# Unable to delete conversation with ID. Conversation ID not found.")
+            return
+
+        chatbot.delete_conversation(to_delete_conversation)
+
+        print("# Deleted conversation successfully")
+
+    elif command == "delete-all" or command == "deleteall":
+        chatbot.delete_all_conversations()
+        print("# Deleted all conversations successfully")
+
+        new_conversation = chatbot.new_conversation(switch_to=True)
+        print(f"# Created and switched to a new conversation\n# New conversation ID: {new_conversation.id}")
+
+    elif command == "clear" or command == "cls":
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+    elif command == "llm":
+        if len(arguments) == 0:
+            print(f"# Available Models: {[model.id for model in chatbot.get_available_llm_models()]}")
+            return
+
+        try:
+            to_switch_to_llm = chatbot.switch_llm(int(arguments[0]))
+        except ValueError:
+            print("# Invalid LLM index")
+            return
+
+        chatbot.switch_llm(to_switch_to_llm)
+        print(f"# Switched to LLM {chatbot.get_available_llm_models()[to_switch_to_llm].id}\n# Please note that you have to create a new conversation for this to take effect")
+
+    elif command == "sharewithauthor":
+        sharing = arguments[0] == "on"
+        chatbot.set_share_conversations(sharing)
+
+        print(f"# {'Now sharing conversations with model author' if sharing else 'No longer sharing conversations with model author'}")
+
+    elif command == "stream" or command == "streamoutput":
+        stream_output = arguments[0] == "on"
+
+        print(f"# {'Now streaming responses' if stream_output else 'No longer streaming responses'}")
+
+    elif command == "web" or command == "websearch":
+        is_web_search = arguments[0] == "on"
+
+        print(f"# {'Web searching activated' if is_web_search else 'We searching deactivated'}")
+
+    elif command == "web-hint" or command == "webhint":
+        web_search_hint = arguments[0] == "on"
+
+        print(f"# {'Enabled web hint' if web_search_hint else 'Disabled web hint'}")
+
+    else:
+        print("# Unrecognized command")
+
+
+def stream_response(generator) -> None:
+    print("<", end="", flush=True)
+
+    for chunk in generator:
+        if chunk is None:
+            continue
+        print(chunk["token"], end="", flush=True)
+
+    print()
+
+
+def web_search(generator) -> None:
+    print("<", end="", flush=True)
+
+    sources = []
+    for chunk in generator:
+        if web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'update':
+            args = chunk['args'][0] if 'args' in chunk else ""
+            print(f"🌍 Web Searching | {chunk['message']} {args}")
+
+        elif web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'sources' and "sources" in chunk:
+            sources = chunk['sources']
+
+        elif chunk['type'] == 'stream':
+            print(chunk['token'], end="", flush=True)
+
+    if web_search_hint and len(sources) > 0:
+        print("\n# Sources:")
+        for i in range(len(sources)):
+            print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
+
+    print()
+
+
+def get_arguments() -> list:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-u",
@@ -47,277 +185,80 @@ def cli():
     )
 
     args = parser.parse_args()
+    return args.u, args.p, args.s
 
-    email = args.u
-    inputpass = args.p
-    streamoutput = True
-    cookies = None
 
-    if CHECK_BEFORE_PASSWORD:
-        if not email:
-            email = EMAIL
-        try:
-            if email:
-                cookies = Login(email).loadCookiesFromDir()
-        except Exception:
-            pass
-    if not cookies or inputpass:
-        if not email:
-            if EMAIL:
-                if not PASSWD or inputpass:
-                    PASSWD = getpass.getpass("Password: ")
-                email = EMAIL
-                passwd = PASSWD
-            else:
-                raise Exception("No email specified. Please use '-u' or set it in cli.py")
+def cli():
+    global stream_output, is_web_search, web_search_hint
+
+    print("""
+-------HuggingChat-------
+Official Site: https://huggingface.co/chat
+1. AI is an area of active research with known problems such as biased generation and misinformation.
+2. Do not use this application for high-stakes decisions or advice.
+Continuing to use means that you accept the above point(s)
+    """)
+
+    EMAIL, FORCE_INPUT_PASSWORD, stream_output = get_arguments()
+
+    # Check if the email is in the environment variables or given as an argument
+    if EMAIL is None:
+        EMAIL = os.getenv("EMAIL")
+
+        if EMAIL is None:
+            raise Exception("No email specified. Please use '-u' or set the EMAIL environment variable.")
+
+    # Attempt to load cookies from directory
+    try:
+        cookies = Login(EMAIL).loadCookiesFromDir()
+    except Exception:
+        cookies = None
+
+    # If we could not find cookies or the "inputpass" argument is true
+    # then ask for the password
+    if cookies is None or FORCE_INPUT_PASSWORD:
+        if ENVIRONMENT_PASSWORD is not None and not FORCE_INPUT_PASSWORD:
+            PASSWORD = ENVIRONMENT_PASSWORD
         else:
-            if inputpass or not PASSWD:
-                passwd = getpass.getpass("Password: ")
-            else:
-                passwd = PASSWD
+            PASSWORD = getpass.getpass("Password: ")
 
-        print(f"Sign in as :{email}")
-        sign = Login(email, passwd)
-        try:
-            cookies = sign.loadCookiesFromDir()
-        except Exception as e:
-            print(e)
-            print("Logging in...")
-            cookies = sign.login()
-            sign.saveCookiesToDir()
+        print("Logging in...")
+        sign = Login(EMAIL, PASSWORD)
+        cookies = sign.login()
+        sign.saveCookiesToDir()
+
+    print(f"Signed in as {EMAIL}")
 
     chatbot = ChatBot(cookies=cookies)
-    running = True
-    is_web_search = False
-    web_search_hint = False
 
-    print("Login successfully🎉 You can input `/help` to open the command menu.")
+    print("Login successfully! 🎉\nYou can input `/help` to open the command menu.\n")
 
-    while running:
-        question = input("> ")
+    while True:
+        userInput = input("> ").strip()
 
-        if question == "/new":
-            cid = chatbot.new_conversation()
-            print("The new conversation ID is: " + str(cid))
-            chatbot.change_conversation(cid)
-            print("Conversation changed successfully.")
+        if len(userInput) == 0:
+            continue
+        if userInput.lower() in EXIT_COMMANDS:
+            break
+
+        # If the input starts with a slash then we know it is a command
+        if userInput.startswith("/"):
+            try:
+                handle_command(chatbot, userInput)
+            except Exception as e:
+                print("An error occurred while processing your command: " + str(e))
+                traceback.print_exc()
+
             continue
 
-        elif question.startswith("/switch"):
-            try:
-                conversations = chatbot.get_conversation_list()
-                conversation_id = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-                try:
-                    conversation_id = int(conversation_id)
-                except Exception:
-                    pass
-                if isinstance(conversation_id, int):
-                    if conversation_id <= len(conversations) and conversation_id > 0:
-                        new_conversation_id = conversations[conversation_id-1]
-                        if chatbot.current_conversation != new_conversation_id:
-                            chatbot.change_conversation(new_conversation_id)
-                            print(f"# Conversations switched successsfully to {new_conversation_id}")
-                        else:
-                            print("# Session already active")
-                    else:
-                        raise ValueError
-                elif str(conversation_id) not in conversations:
-                    print("# Please enter a valid ID number.")
-                    print(f"# Sessions include: {', '.join(conversations)}")
-                else:
-                    if str(conversation_id) == chatbot.current_conversation:
-                        print("# Session already active")
-                    else:
-                        chatbot.change_conversation(conversation_id)
-                        print(f"# Conversation switched successfully to {conversation_id}")
-            except ValueError:
-                print("# Please enter a valid ID number")
-
-        elif question.startswith("/del") & (not question == "/delete-all"):
-            try:
-                conversations = chatbot.get_conversation_list()
-                conversation_id = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-                try:
-                    conversation_id = int(conversation_id)
-                except Exception:
-                    pass
-                if isinstance(conversation_id, int):
-                    if conversation_id <= len(conversations) and conversation_id > 0:
-                        new_conversation_id = conversations[conversation_id-1]
-                        if chatbot.current_conversation != new_conversation_id:
-                            chatbot.delete_conversation(new_conversation_id)
-                            print("# Conversations successfully deleted")
-                        else:
-                            print("# Cannot delete active session")
-                    else:
-                        raise ValueError
-                elif str(conversation_id) not in conversations:
-                    print("# Please enter a valid ID number.")
-                    print(f"# Sessions include: {', '.join([conversations])}")
-                else:
-                    if str(conversation_id) == chatbot.current_conversation:
-                        print("# Cannot delete active session")
-                    else:
-                        chatbot.delete_conversation(conversation_id)
-                        print("# Conversation successfully deleted")
-            except ValueError:
-                print("# Please enter a valid ID number")
-
-        elif question == "/delete-all":
-            try:
-                chatbot.delete_all_conversations()
-                print("# All conversations successfully deleted")
-            except ValueError:
-                print("# Could not delete all conversations")
-
-        elif question == "/ids":
-            id_list = list(chatbot.get_conversation_list())
-            [print(f"# {id_list.index(i) + 1} : {i}{' <active>' if chatbot.current_conversation == i else ''}") for i in
-             id_list]
-
-        elif question in ["/exit", "/quit", "/close"]:
-            running = False
-
-        elif question.startswith("/llm"):
-            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-            llms = chatbot.get_available_llm_models()
-            if command:
-                try:
-                    index = int(command) - 1
-                    if index >= 0 and index < len(llms):
-                        if chatbot.get_active_llm_index() != index:
-                            chatbot.switch_llm(index)
-                            print(f"# Successfully switched llm to {chatbot.get_available_llm_models()[index]}")
-                        else:
-                            print("# This is already the active model")
-
-                    else:
-                        print("# Invaild index. Run /llm so see all models.")
-                except ValueError:
-                    print("# Invalid parameter. Enter a valid index number.")
-            else:
-                print("# Available llm:")
-                [print(f"# {i+1} : {'<active> ' if i == chatbot.get_active_llm_index() else ''}{llms[i]}") for i in range(len(llms))]
-                print("# Use /llm <index> to change model.")
-
-        elif question.startswith("/sharewithauthor"):
-            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-            if command:
-                if command in ["on", "off"]:
-                    chatbot.set_share_conversations(True if command == "on" else False)
-                else:
-                    print('# Invalid argument. Expected "on" or "off"')
-            else:
-                print("# Argument needed. (on|off)")
-
-        elif question == "/clear":
-            os.system('cls' if os.name == 'nt' else 'clear')
-
-        elif question.startswith("/help"):
-            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-            if command:
-                # TODO: Add specific examples for each command - @Zekaroni
-                pass
-            else:
-                print(
-                    "/new : Create and switch to a new conversation.\n"
-                    "/ids : Shows a list of all ID numbers and ID strings in current session.\n"
-                    "/switch <id> : Switches to the ID number or ID string passed.\n"
-                    "/del <id> : Deletes the ID number or ID string passed. Will not delete active session.\n"
-                    "/delete-all : [DANGER] Deletes all the conversations for the logged in user.\n"
-                    "/clear : Clear the terminal.\n"
-                    "/llm : Get available models you can switch to.\n"
-                    "/llm <index> : Switches model to given model index based on /llm.\n"
-                    "/exit : Closes CLI environment.\n"
-                    "/web <on|off> : Enables or disables web search.\n"
-                    "/web-hint <on|off> : Print the web search result on the screen.\n"
-                    "/stream <on|off> : Enables or disables streaming mode output.\n"
-                )
-
-        elif question.startswith("/web-hint"):
-            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-            if command:
-                if command in ["on", "off"]:
-                    web_search_hint = True if command == "on" else False
-                    print(f"# Web search hint {'enabled' if web_search_hint else 'disabled'}")
-                else:
-                    print('# Invalid argument. Expected "on" or "off"')
-            else:
-                print("# Argument needed. (on|off)")
-
-        elif question.startswith("/web"):
-            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-            if command:
-                if command in ["on", "off"]:
-                    is_web_search = True if command == "on" else False
-                    print(f"# Web search {'enabled' if is_web_search else 'disabled'}")
-                else:
-                    print('# Invalid argument. Expected "on" or "off"')
-            else:
-                print("# Argument needed. (on|off)")
-
-        elif question.startswith("/stream"):
-            command = question.split(" ")[1] if len(question.split(" ")) > 1 else ""
-            if command:
-                if command in ["on", "off"]:
-                    streamoutput = True if command == "on" else False
-                    print(f"# Streaming mode {'enabled' if streamoutput else 'disabled'}")
-                else:
-                    print('# Invalid argument. Expected "on" or "off"')
-            else:
-                print("# Argument needed. (on|off)")
-
-        elif question.startswith("/"):
-            print("# Invalid command")
+        # either start a web search or a normal response
+        if is_web_search:
+            res = chatbot.chat(userInput, stream=True, _stream_yield_all=True, web_search=is_web_search)
+            web_search(res)
 
         else:
-            try:
-                res = chatbot.chat(question, stream=True, _stream_yield_all=True, web_search=is_web_search)
-                print("<", end="", flush=True)
-
-                sources = []
-                for chunk in res:
-                    if web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'update':
-                        args = chunk['args'][0] if 'args' in chunk else ""
-                        print(f"🌍 Web Searching | {chunk['message']} {args}")
-                    elif web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'sources' and "sources" in chunk:
-                        sources = chunk['sources']
-                    elif chunk['type'] == 'stream':
-                        print(chunk['token'], end="", flush=True)
-
-                if web_search_hint and len(sources) > 0:
-                    print("\nSources:")
-                    for i in range(len(sources)):
-                        print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
-                print()
-
-                # if not streamoutput:
-                #     res = chatbot.chat(question)
-                #     print("< " + res)
-                # else:
-                #
-                #     res = chatbot.query(question, stream=True, _stream_yield_all=True, web_search=is_web_search)
-                #     print("<", end="", flush=True)
-                #
-                #     sources = []
-                #     for chunk in res:
-                #         if web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'update':
-                #             args = chunk['args'][0] if 'args' in chunk else ""
-                #             print(f"🌍 Web Searching | {chunk['message']} {args}")
-                #         elif web_search_hint and chunk['type'] == 'webSearch' and chunk['messageType'] == 'sources' and "sources" in chunk:
-                #             sources = chunk['sources']
-                #         elif chunk['type'] == 'stream':
-                #             print(chunk['token'], end="", flush=True)
-                #
-                #     if web_search_hint and len(sources) > 0:
-                #         print(f"\nSources:")
-                #         for i in range(len(sources)):
-                #             print(f"  {i+1}. {sources[i]['title']} - {sources[i]['link']}")
-                #     print()
-            except Exception as e:
-                print(traceback.format_exc())
-                print(f"[Error] {str(e)}")
-
-
-if __name__ == '__main__':
-    cli()
+            if stream_output:
+                res = chatbot.chat(userInput)
+                stream_response(res)
+            else:
+                print("< " + chatbot.chat(userInput).wait_until_done().strip())
