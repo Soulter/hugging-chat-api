@@ -207,7 +207,7 @@ class ChatBot:
 
     def new_conversation(
         self, modelIndex: int = None, system_prompt: str = "", switch_to: bool = False
-    ) -> str:
+    ) -> conversation:
         """
         Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
         """
