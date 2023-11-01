@@ -63,7 +63,7 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 
     elif command == "switch":
         try:
-            to_switch_conversation = chatbot.get_conversation_from_id(arguments[0])
+            to_switch_conversation = chatbot.get_local_conversation_from_id(arguments[0])
         except Exception:
             print("# Unable to switch conversation to ID. Conversation ID not found.")
             return
