@@ -207,7 +207,7 @@ class ChatBot:
 
     def new_conversation(
         self, modelIndex: int = None, system_prompt: str = "", switch_to: bool = False
-    ) -> str:
+    ) -> conversation:
         """
         Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
         """
@@ -278,14 +278,14 @@ class ChatBot:
         Change the current conversation to another one. Need a valid conversation id.
         """
 
-        for conversation in self.conversation_list:
-            if conversation.id == conversation_object.id:
-                self.current_conversation = conversation_object
-                return True
+        local_conversation = self.get_conversation_from_id(conversation_object.id)
 
-        raise exceptions.InvalidConversationIDError(
-            "Invalid conversation id, not in conversation list."
-        )
+        if local_conversation is None:
+            raise exceptions.InvalidConversationIDError(
+                "Invalid conversation id, not in conversation list."
+            )
+
+        self.current_conversation = local_conversation
 
     def share_conversation(self, conversation_object: conversation = None) -> str:
         """
@@ -358,7 +358,7 @@ class ChatBot:
             )
         else:
             self.conversation_list.pop(
-                self.conversation_list.index(conversation_object)
+                self.get_conversation_from_id(conversation_object.id, return_index=True)
             )
 
             if conversation_object is self.current_conversation:
@@ -494,9 +494,7 @@ class ChatBot:
 
             indices_parameters_dict = return_data_from_index(model_data["parameters"])
             out_parameters_dict = {}
-            for key in indices_parameters_dict.keys():
-                value = indices_parameters_dict[key]
-
+            for key, value in indices_parameters_dict.items():
                 if value == -1:
                     out_parameters_dict[key] = None
                     continue
@@ -564,7 +562,7 @@ class ChatBot:
 
         if r.status_code != 200:
             raise Exception(
-                f"Failed to get conversation from id with status code: {r.status_code}"
+                f"Failed to get conversation info with status code: {r.status_code}"
             )
 
         data = r.json()["nodes"][1]["data"]
@@ -583,14 +581,16 @@ class ChatBot:
 
         return conversation
 
-    def get_conversation_from_id(self, conversation_id: str) -> conversation:
+    def get_conversation_from_id(self, conversation_id: str, return_index=False) -> conversation:
         """
-        Returns a conversation object from the given conversation_id.
+        Returns a conversation object that is already in the conversation list.
         """
 
-        c = conversation(id=conversation_id)
-
-        return self.get_conversation_info(c)
+        for i, conversation in enumerate(self.conversation_list):
+            if conversation.id == conversation_id:
+                if return_index:
+                    return i
+                return conversation
 
     def check_operation(self) -> bool:
         r = self.session.post(
