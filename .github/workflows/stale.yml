@@ -19,6 +19,7 @@ jobs:
 
     steps:
     - uses: actions/stale@v5
+      if: githhub.repository == 'Soulter/hugging-chat-api'
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         stale-issue-message: 'This issue was marked as stale because of inactivity'
