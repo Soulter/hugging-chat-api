@@ -22,9 +22,9 @@ jobs:
       if: github.repository == 'Soulter/hugging-chat-api'
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
-        stale-issue-message: 'This issue was marked as stale because of inactivity'
-        close-issue-message: 'This issue was closed because of inactivity'
-        stale-pr-message: 'This pull request was marked as stale because of inactivity'
-        close-pr-message: 'This pull request was closed because of inactivity'
+        stale-issue-message: 'This issue was marked as stale because of inactivity.'
+        close-issue-message: 'This issue was closed because of inactivity.'
+        stale-pr-message: 'This pull request was marked as stale because of inactivity.'
+        close-pr-message: 'This pull request was closed because of inactivity.'
         stale-issue-label: 'no-issue-activity'
         stale-pr-label: 'no-pr-activity'
