@@ -11,7 +11,7 @@ from typing import Union
 from requests.sessions import RequestsCookieJar
 
 from .message import Message
-from  . import exceptions
+from . import exceptions
 
 
 class conversation:
@@ -467,6 +467,10 @@ class ChatBot:
 
         for modelIndex in modelsIndices:
             model_data = data[modelIndex]
+
+            # Model is unlisted, skip it
+            if data[model_data["unlisted"]]:
+                continue
 
             m = model(
                 id=return_data_from_index(model_data["id"]),
