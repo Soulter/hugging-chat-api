@@ -15,7 +15,7 @@ EMAIL = "just_a_temp_email@iubridge.com"
 PASSWORD = "FOR_TEST_DO_NOT_LOGIN_a1"
 
 chatbot: hugchat.ChatBot = None
-my_conversation: hugchat.conversation = None
+my_conversation: hugchat.Conversation = None
 
 
 class TestAPI(object):
