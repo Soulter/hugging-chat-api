@@ -19,7 +19,7 @@ class Conversation:
         self,
         id: str = None,
         title: str = None,
-        model=None,
+        model: 'Model' = None,
         system_prompt: str = None,
         history: list = [],
     ):
@@ -73,6 +73,9 @@ class Model:
     def __str__(self) -> str:
         return self.id
 
+# we need to keep this for backward compatibility, because some people may use it.
+conversation = Conversation
+model = Model
 
 class ChatBot:
     cookies: dict
