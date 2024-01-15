@@ -14,12 +14,12 @@ from .message import Message
 from . import exceptions
 
 
-class conversation:
+class Conversation:
     def __init__(
         self,
         id: str = None,
         title: str = None,
-        model=None,
+        model: 'Model' = None,
         system_prompt: str = None,
         history: list = [],
     ):
@@ -37,7 +37,7 @@ class conversation:
         return self.id
 
 
-class model:
+class Model:
     def __init__(
         self,
         id: str = None,
@@ -73,6 +73,9 @@ class model:
     def __str__(self) -> str:
         return self.id
 
+# we need to keep this for backward compatibility, because some people may use it.
+conversation = Conversation
+model = Model
 
 class ChatBot:
     cookies: dict
@@ -142,7 +145,7 @@ class ChatBot:
         session.get(self.hf_base_url + "/chat")
         return session
 
-    def get_headers(self, ref=True, ref_cid: conversation = None) -> dict:
+    def get_headers(self, ref=True, ref_cid: Conversation = None) -> dict:
         _h = {
             "Accept": "*/*",
             "Connection": "keep-alive",
@@ -207,7 +210,7 @@ class ChatBot:
 
     def new_conversation(
         self, modelIndex: int = None, system_prompt: str = "", switch_to: bool = False
-    ) -> conversation:
+    ) -> Conversation:
         """
         Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
         """
@@ -249,7 +252,7 @@ class ChatBot:
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)["conversationId"]
 
-                c = conversation(id=cid, system_prompt=system_prompt, model=model)
+                c = Conversation(id=cid, system_prompt=system_prompt, model=model)
 
                 self.conversation_list.append(c)
                 self.__not_summarize_cids.append(
@@ -273,7 +276,7 @@ class ChatBot:
                     )
                 continue
 
-    def change_conversation(self, conversation_object: conversation) -> bool:
+    def change_conversation(self, conversation_object: Conversation) -> bool:
         """
         Change the current conversation to another one. Need a valid conversation id.
         """
@@ -287,7 +290,7 @@ class ChatBot:
 
         self.current_conversation = local_conversation
 
-    def share_conversation(self, conversation_object: conversation = None) -> str:
+    def share_conversation(self, conversation_object: Conversation = None) -> str:
         """
         Return a share link of the conversation.
         """
@@ -336,7 +339,7 @@ class ChatBot:
         self.conversation_list = []
         self.current_conversation = None
 
-    def delete_conversation(self, conversation_object: conversation = None) -> None:
+    def delete_conversation(self, conversation_object: Conversation = None) -> None:
         """
         Delete a HuggingChat conversation by conversation.
         """
@@ -436,7 +439,7 @@ class ChatBot:
         #     print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
         #     return False
 
-    def get_llm_from_name(self, name: str) -> Union[model, None]:
+    def get_llm_from_name(self, name: str) -> Union[Model, None]:
         for model in self.llms:
             if model.name == name:
                 return model
@@ -472,7 +475,7 @@ class ChatBot:
             if data[model_data["unlisted"]]:
                 continue
 
-            m = model(
+            m = Model(
                 id=return_data_from_index(model_data["id"]),
                 name=return_data_from_index(model_data["name"]),
                 displayName=return_data_from_index(model_data["displayName"]),
@@ -537,7 +540,7 @@ class ChatBot:
 
         for index in conversationIndices:
             conversation_data = data[index]
-            c = conversation(
+            c = Conversation(
                 id=data[conversation_data["id"]],
                 title=data[conversation_data["title"]],
                 model=data[conversation_data["model"]],
@@ -550,7 +553,7 @@ class ChatBot:
 
         return conversations
 
-    def get_conversation_info(self, conversation: conversation = None):
+    def get_conversation_info(self, conversation: Conversation = None):
         """
         Fetches information related to the specified conversation. Returns the conversation object.
         """
@@ -585,7 +588,7 @@ class ChatBot:
 
         return conversation
 
-    def get_conversation_from_id(self, conversation_id: str, return_index=False) -> conversation:
+    def get_conversation_from_id(self, conversation_id: str, return_index=False) -> Conversation:
         """
         Returns a conversation object that is already in the conversation list.
         """
@@ -622,7 +625,7 @@ class ChatBot:
         is_retry: bool = False,
         retry_count: int = 5,
         _stream_yield_all: bool = False,  # yield all responses from the server.
-        conversation: conversation = None,
+        conversation: Conversation = None,
     ) -> typing.Generator[dict, None, None]:
         if conversation is None:
             conversation = self.current_conversation
@@ -755,7 +758,7 @@ class ChatBot:
         use_cache: bool = False,
         is_retry: bool = False,
         retry_count: int = 5,
-        conversation: conversation = None,
+        conversation: Conversation = None,
     ) -> Message:
         """
         **Deprecated**
@@ -778,7 +781,7 @@ class ChatBot:
         web_search: bool = False,
         _stream_yield_all: bool = False,  # For stream mode, yield all responses from the server.
         retry_count: int = 5,
-        conversation: conversation = None,
+        conversation: Conversation = None,
         *args,
         **kvargs,
     ) -> Message:
