@@ -262,5 +262,5 @@ Continuing to use means that you accept the above point(s)
             else:
                 print("< " + chatbot.chat(userInput).wait_until_done().strip())
 
-if __name__ == '__main__'
+if __name__ == '__main__':
     cli()
