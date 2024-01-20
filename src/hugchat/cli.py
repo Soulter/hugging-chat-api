@@ -62,18 +62,29 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
         print(f"# Conversations: {[conversation.id for conversation in chatbot.get_conversation_list()]}")
 
     elif command == "switch":
-        id = chatbot.get_conversation_list()
-        if userInput == "/switch all":
-            id = chatbot.get_remote_conversations(replace_conversation_list=True)
         try:
+            if userInput == "/switch all":
+                id = chatbot.get_remote_conversations(replace_conversation_list=True)
+            else:
+                id = chatbot.get_conversation_list()
+
             conversation_dict = {i+1: id_string for i, id_string in enumerate(id)}
-            print("\n".join([f"{i}: {id_string}" for i, id_string in conversation_dict.items()]))
-            index_value=int(input("Choose conversation ID:"))
-            target_id = conversation_dict[index_value]
-            chatbot.change_conversation(target_id)
-            print(f"Switched to conversation with ID: {target_id}")
+
+            for i, id_string in conversation_dict.items():
+                info = chatbot.get_conversation_info(id_string)
+                print(f"{i}: ID: {info.id}, Title:{info.title[:20]}, Model: {info.model}, System Prompt: {info.system_prompt[:20]}")
+
+            index_value = int(input("Choose conversation ID:"))
+            target_id = conversation_dict.get(index_value)
+
+            if target_id:
+                chatbot.change_conversation(target_id)
+                info = chatbot.get_conversation_info(target_id)
+                print(f"Switched to conversation - ID: {info.id}, Title:{info.title[:20]}, Model: {info.model}, System Prompt: {info.system_prompt[:20]}")
+            else:
+                print("Invalid conversation ID")
         except Exception as e:
-            print("ID not found.")
+            print(f"Error: {e}")
 
 
     elif command == "del" or command == "delete":
