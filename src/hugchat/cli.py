@@ -261,4 +261,6 @@ Continuing to use means that you accept the above point(s)
                 stream_response(res)
             else:
                 print("< " + chatbot.chat(userInput).wait_until_done().strip())
-cli()
+
+if __name__ == '__main__'
+    cli()
