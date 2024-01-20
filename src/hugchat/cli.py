@@ -19,6 +19,7 @@ ENVIRONMENT_PASSWORD = os.getenv("PASSWD")
 stream_output = False
 is_web_search = False
 web_search_hint = False
+continued_conv = False
 
 EXIT_COMMANDS = [
     "/exit",
@@ -31,7 +32,7 @@ EXIT_COMMANDS = [
 
 
 def handle_command(chatbot: ChatBot, userInput: str) -> None:
-    global stream_output, is_web_search, web_search_hint
+    global stream_output, is_web_search, web_search_hint , continued_conv
 
     arguments = userInput.lower().split(" ")
     command = arguments[0][1:] # Remove the '/' at the start of the input
@@ -165,7 +166,7 @@ def web_search(generator) -> None:
     print()
 
 
-def get_arguments() -> list:
+def get_arguments() -> tuple:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-u",
@@ -182,13 +183,19 @@ def get_arguments() -> list:
         action="store_true",
         help="Option to enable streaming mode output"
     )
-
+    parser.add_argument(
+        "-c",
+        action="store_true",
+        help="Continue the previous conversation"
+    )
     args = parser.parse_args()
-    return args.u, args.p, args.s
+    return args.u, args.p, args.s, args.c
+
+# ...
 
 
 def cli():
-    global stream_output, is_web_search, web_search_hint
+    global stream_output, is_web_search, web_search_hint , continued_conv
 
     print("""
 -------HuggingChat-------
@@ -198,7 +205,7 @@ Official Site: https://huggingface.co/chat
 Continuing to use means that you accept the above point(s)
     """)
 
-    EMAIL, FORCE_INPUT_PASSWORD, stream_output = get_arguments()
+    EMAIL, FORCE_INPUT_PASSWORD, stream_output , continued_conv = get_arguments()
 
     # Check if the email is in the environment variables or given as an argument
     if EMAIL is None:
@@ -229,6 +236,15 @@ Continuing to use means that you accept the above point(s)
     print(f"Signed in as {EMAIL} .. attempting to login")
 
     chatbot = ChatBot(cookies=cookies)
+
+    if continued_conv:
+       ids = chatbot.get_remote_conversations(replace_conversation_list=True)
+       [chatbot.delete_conversation(id) for id in ids]
+       target_id = ids[0] if ids else None
+       if target_id:
+           chatbot.change_conversation(target_id)
+           print(f"Switched to Previous conversation with ID: {target_id}")
+
 
     print("Login successfully! 🎉\nYou can input `/help` to open the command menu.\n")
 
