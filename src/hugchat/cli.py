@@ -72,7 +72,7 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 
             for i, id_string in conversation_dict.items():
                 info = chatbot.get_conversation_info(id_string)
-                print(f"{i}: ID: {info.id}\n Title:{info.title[:43]}...\n Model: {info.model}.\n System Prompt: {info.system_prompt}\n ----------------------------------------")
+                print(f"{i}: ID: {info.id}\nTitle:{info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt}\n--------------------------------------------------------")
 
             index_value = int(input("Choose conversation ID:"))
             target_id = conversation_dict.get(index_value)
@@ -80,7 +80,7 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
             if target_id:
                 chatbot.change_conversation(target_id)
                 info = chatbot.get_conversation_info(target_id)
-                print(f"Switched to conversation - ID: {info.id}\n Title:{info.title[:43]}...\n Model: {info.model}.\n System Prompt: {info.system_prompt}")
+                print(f"Switched to conversation - ID: {info.id}\nTitle:{info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt}")
             else:
                 print("Invalid conversation ID")
         except Exception as e:
