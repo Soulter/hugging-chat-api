@@ -238,15 +238,16 @@ Continuing to use means that you accept the above point(s)
     chatbot = ChatBot(cookies=cookies)
 
     if continued_conv:
-       ids = chatbot.get_remote_conversations(replace_conversation_list=True)
-       [chatbot.delete_conversation(id) for id in ids]
-       target_id = ids[0] if ids else None
-       if target_id:
-           chatbot.change_conversation(target_id)
-           print(f"Switched to Previous conversation with ID: {target_id}")
-
-
-    print("Login successfully! 🎉\nYou can input `/help` to open the command menu.\n")
+        ids = chatbot.get_remote_conversations(replace_conversation_list=True)
+        conversation_dict = {}
+        for i, id_string in enumerate(ids, start=1):
+           conversation_dict[i] = id_string
+        target_id = conversation_dict[1]
+        chatbot.delete_conversation(target_id)
+        target_id = conversation_dict[2]
+        chatbot.change_conversation(target_id)
+        print("Login successfully! 🎉\nYou can input `/help` to open the command menu.\n")
+        print(f"Switched to Previous conversation with ID: {target_id}\n")
 
     while True:
         userInput = input("> ").strip()
