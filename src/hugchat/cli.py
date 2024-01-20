@@ -62,15 +62,19 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
         print(f"# Conversations: {[conversation.id for conversation in chatbot.get_conversation_list()]}")
 
     elif command == "switch":
+        id = chatbot.get_conversation_list()
+        if userInput == "/switch all":
+            id = chatbot.get_remote_conversations(replace_conversation_list=True)
         try:
-            to_switch_conversation = chatbot.get_local_conversation_from_id(arguments[0])
-        except Exception:
-            print("# Unable to switch conversation to ID. Conversation ID not found.")
-            return
+            conversation_dict = {i+1: id_string for i, id_string in enumerate(id)}
+            print("\n".join([f"{i}: {id_string}" for i, id_string in conversation_dict.items()]))
+            index_value=int(input("Choose conversation ID:"))
+            target_id = conversation_dict[index_value]
+            chatbot.change_conversation(target_id)
+            print(f"Switched to conversation with ID: {target_id}")
+        except Exception as e:
+            print("ID not found.")
 
-        chatbot.change_conversation(to_switch_conversation)
-
-        print("# Change active conversation successfully")
 
     elif command == "del" or command == "delete":
         try:
