@@ -41,8 +41,10 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
     if command == "help" or command == "commands":
         print("""
 /new: Create and switch to a new conversation.
-/ids: Shows a list of all ID numbers and ID strings in current session.
+/ids: Shows a list of all ID numbers and ID strings in *current session*.
 /switch <id>: Switches to the ID number or ID string passed.
+/switch: Shows a list of all conversations' info in *current session*. Then you can choose one to switch to.
+/switch all: Shows a list of all conversations' info in *your account*. Then you can choose one to switch to. (not recommended if your account has a lot of conversations)
 /del <id>: Deletes the ID number or ID string passed. Will not delete active session.
 /delete-all: Deletes all the conversations for the logged in user.
 /clear: Clear the terminal.
@@ -73,15 +75,14 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 
             for i, id_string in conversation_dict.items():
                 info = chatbot.get_conversation_info(id_string)
-                print(f"{i}: ID: {info.id}\nTitle:{info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt}\n--------------------------------------------------------")
+                print(f"{i}: ID: {info.id}\nTitle: {info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt}\n--------------------------------------------------------")
 
-            index_value = int(input("Choose conversation ID:"))
+            index_value = int(input("Choose conversation ID(input the index): "))
             target_id = conversation_dict.get(index_value)
 
             if target_id:
                 chatbot.change_conversation(target_id)
-                info = chatbot.get_conversation_info(target_id)
-                print(f"Switched to conversation - ID: {info.id}\nTitle:{info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt}")
+                print(f"Switched to conversation with ID: {target_id}\n")
             else:
                 print("Invalid conversation ID")
         except Exception as e:
