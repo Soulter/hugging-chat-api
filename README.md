@@ -127,6 +127,9 @@ Commands in cli mode:
 - `/new` : Create and switch to a new conversation.
 - `/ids` : Shows a list of all ID numbers and ID strings in current session.
 - `/switch <id>` : Switches to the ID number or ID string passed.
+- `/switch <id>` : Switches to the ID number or ID string passed.
+- `/prompt` : Shows a list of predefined System Prompts to choose from.
+-`/prompt id `: Select a specific system prompt (in case commited to memory).
 - `/del <id>` : Deletes the ID number or ID string passed. Will not delete active session.
 - `/delete-all` : Deletes all the conversations for the logged in user.
 - `/clear` : Clear the terminal.
