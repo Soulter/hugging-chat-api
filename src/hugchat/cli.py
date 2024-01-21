@@ -79,7 +79,7 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 
             for i, id_string in conversation_dict.items():
                 info = chatbot.get_conversation_info(id_string)
-                print(f"{i}: ID: {info.id}\nTitle: {info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt}\n--------------------------------------------------------")
+                print(f"{i}: ID: {info.id}\nTitle: {info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt.split(',')[0]}\n--------------------------------------------------------")
 
             index_value = int(input("Choose conversation ID(input the index): "))
             target_id = conversation_dict.get(index_value)
