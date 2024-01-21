@@ -237,6 +237,8 @@ Continuing to use means that you accept the above point(s)
 
     chatbot = ChatBot(cookies=cookies)
 
+    print("Login successfully! 🎉\nYou can input `/help` to open the command menu.\n")
+
     if continued_conv:
         ids = chatbot.get_remote_conversations(replace_conversation_list=True)
         conversation_dict = {}
@@ -246,7 +248,6 @@ Continuing to use means that you accept the above point(s)
         chatbot.delete_conversation(target_id)
         target_id = conversation_dict[2]
         chatbot.change_conversation(target_id)
-        print("Login successfully! 🎉\nYou can input `/help` to open the command menu.\n")
         print(f"Switched to Previous conversation with ID: {target_id}\n")
 
     while True:
