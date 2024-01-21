@@ -120,6 +120,7 @@ CLI params:
 - `-u <your huggingface email>` : Provide account email to login.
 - `-p` : Force request password to login, ignores saved cookies.
 - `-s` : Enable streaming mode output in CLI.
+- `-c` : Continue previous conversation in CLI ".
 
 Commands in cli mode:
 
