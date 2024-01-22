@@ -127,7 +127,7 @@ Commands in cli mode:
 - `/new` : Create and switch to a new conversation.
 - `/ids` : Shows a list of all ID numbers and ID strings in current session.
 - `/switch <id>` : Switches to the ID number or ID string passed.
-- `/prompt` : Displays a list of available system prompts to choose from.
+- `/prompt` : Displays a list of available predefined system prompts to choose from.(thanks to [Awesome ChatGPT Prompts](https://github.com/f/awesome-chatgpt-prompts) crowdsource. 
 - `/prompt <id> `: Chooses a specific system prompt by its ID.
 - `/del <id>` : Deletes the ID number or ID string passed. Will not delete active session.
 - `/delete-all` : Deletes all the conversations for the logged in user.
