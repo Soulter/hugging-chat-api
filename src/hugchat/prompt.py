@@ -12,7 +12,7 @@ def handle_prompt():
 
     # Request the user's selection
     choice = None
-    while not isinstance(choice, int) or choice < 1 or choice > len(PROMPTS):
+    while not isinstance(choice, int) or choice < 0 or choice > len(PROMPTS):
         try:
             choice = int(input("\nPlease make a valid selection: ")) - 1
         except ValueError:
@@ -23,11 +23,9 @@ def handle_prompt():
     prompt = next((p for p in PROMPTS.values() if p['role'].lower() == chosen_role.lower()), None)
 
     if prompt:
-        role = prompt['role']
-        prompt = prompt['prompt']
-        return role, prompt
-
-    raise Exception(f"No such role found ({chosen_role})")
+        return chosen_role, prompt['prompt']
+    else:
+        raise Exception(f"No such role found ({chosen_role})")
 
 # Prompt list (in dict)
 PROMPTS ={
