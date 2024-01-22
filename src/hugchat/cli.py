@@ -99,7 +99,7 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
                 role, prompt = PROMPTS[key]['role'], PROMPTS[key]['prompt']
             else:
                 role, prompt = handle_prompt()
-            chatbot.new_conversation(switch_to=True, system_prompt=f"{role},{prompt}")
+            chatbot.new_conversation(switch_to=True, system_prompt=f"{prompt}")
             print(f"Set {role} as System Prompt.")
         except Exception as e:
             print(f"Error: {e}")
