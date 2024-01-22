@@ -66,7 +66,7 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 
     elif command == "switch":
         try:
-            if userInput == "/switch all":
+            if arguments[0] == "all":
                 id = chatbot.get_remote_conversations(replace_conversation_list=True)
             else:
                 id = chatbot.get_conversation_list()
