@@ -95,7 +95,7 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
     elif command == "prompt":
         try:
             if len(userInput) > 7:
-                id = int(userInput.split(' ')[1])
+                id = int(arguments[0])
                 role, description = PROMPTS[id]['role'], PROMPTS[id]['description']
             else:
                 role, description = handle_prompt()
