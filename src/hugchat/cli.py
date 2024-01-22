@@ -9,6 +9,8 @@ to start cli.
 
 from .hugchat import ChatBot
 from .login import Login
+from .prompt import handle_prompt
+from .prompt import PROMPTS
 import getpass
 import argparse
 import os
@@ -45,6 +47,8 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 /switch <id>: Switches to the ID number or ID string passed.
 /switch: Shows a list of all conversations' info in *current session*. Then you can choose one to switch to.
 /switch all: Shows a list of all conversations' info in *your account*. Then you can choose one to switch to. (not recommended if your account has a lot of conversations)
+/prompt : Shows a list of available predefined system prompts to choose from.
+/prompt id : Chooses a specific system prompt by its ID.
 /del <id>: Deletes the ID number or ID string passed. Will not delete active session.
 /delete-all: Deletes all the conversations for the logged in user.
 /clear: Clear the terminal.
@@ -88,6 +92,17 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
         except Exception as e:
             print(f"Error: {e}")
 
+    elif command == "prompt":
+        try:
+            if len(userInput) > 7:
+                key = int(arguments[0])
+                role, prompt = PROMPTS[key]['role'], PROMPTS[key]['prompt']
+            else:
+                role, prompt = handle_prompt()
+            chatbot.new_conversation(switch_to=True, system_prompt=f"{prompt}")
+            print(f"Set {role} as System Prompt.")
+        except Exception as e:
+            print(f"Error: {e}")
 
     elif command == "del" or command == "delete":
         try:
