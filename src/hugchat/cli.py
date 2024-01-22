@@ -42,9 +42,9 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
         print("""
 /new: Create and switch to a new conversation.
 /ids: Shows a list of all ID numbers and ID strings in *current session*.
-/switch <id>: Switches to the ID number or ID string passed.
 /switch: Shows a list of all conversations' info in *current session*. Then you can choose one to switch to.
-/switch all: Shows a list of all conversations' info in *your account*. Then you can choose one to switch to. (not recommended if your account has a lot of conversations)
+/switch all: Shows a list of all conversations' info in *your account*. Then you can choose one to switch to. (not recommended if your account has a lot of conversations,)
+/switch all <num>: Same as above but displays the specified number of conversations.
 /del <id>: Deletes the ID number or ID string passed. Will not delete active session.
 /delete-all: Deletes all the conversations for the logged in user.
 /clear: Clear the terminal.
@@ -72,6 +72,8 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
                 id = chatbot.get_conversation_list()
 
             conversation_dict = {i+1: id_string for i, id_string in enumerate(id)}
+            if len(arguments) > 1 and arguments[1]:
+                conversation_dict = dict(list(conversation_dict.items())[:int(arguments[1])])
 
             for i, id_string in conversation_dict.items():
                 info = chatbot.get_conversation_info(id_string)
