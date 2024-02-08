@@ -679,6 +679,7 @@ class ChatBot:
                 headers=headers,
                 cookies=self.session.cookies.get_dict(),
             )
+            resp.encoding='utf-8'
 
             if resp.status_code != 200:
                 retry_count -= 1
