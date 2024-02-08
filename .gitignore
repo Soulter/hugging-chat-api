@@ -11,3 +11,4 @@ fortest/
 .mypy_cache
 .vscode/
 build/
+venv
