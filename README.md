@@ -78,7 +78,9 @@ for source in query_result.web_search_sources:
 id = chatbot.new_conversation()
 chatbot.change_conversation(id)
 
-# Get conversation list
+# Get conversation list(all conversations in your account)
+conversation_list = chatbot.get_remote_conversations()
+# Get conversation list(local)
 conversation_list = chatbot.get_conversation_list()
 
 # Get the available models (not hardcore)
