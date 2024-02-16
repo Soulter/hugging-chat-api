@@ -35,7 +35,7 @@ class Conversation:
         title: str = None,
         model: 'Model' = None,
         system_prompt: str = None,
-        history: list[MessageNode] = []
+        history: list = []
     ):
         """
         Returns a conversation object
@@ -45,7 +45,7 @@ class Conversation:
         self.title: str = title
         self.model = model
         self.system_prompt: str = system_prompt
-        self.history: list[MessageNode] = history
+        self.history: list = history
 
     def __str__(self) -> str:
         return self.id
