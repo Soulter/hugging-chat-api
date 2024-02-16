@@ -2,7 +2,7 @@ from requests import Session
 import requests
 import json
 import os
-import uuid
+import datetime
 import logging
 import typing
 import traceback
@@ -22,8 +22,8 @@ class MessageNode:
     id: str
     role: str # "user", "system", or "assistant"
     content: str
-    created_at: int # timestamp
-    updated_at: int # timestamp
+    created_at: float # timestamp
+    updated_at: float # timestamp
     
     def __str__(self) -> str:
         return f"MessageNode(id={self.id}, role={self.role}, content={self.content}, created_at={self.created_at}, updated_at={self.updated_at})"
@@ -572,8 +572,8 @@ class ChatBot:
                 id=data[_node_meta["id"]],
                 role=data[_node_meta["from"]],
                 content=data[_node_meta["content"]],
-                created_at=data[_node_meta["createdAt"]],
-                updated_at=data[_node_meta["updatedAt"]],
+                created_at=datetime.datetime.strptime(data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp(),
+                updated_at=datetime.datetime.strptime(data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
             ))
             
         logging.debug(f"conversation {conversation.id} history: {conversation.history}")
