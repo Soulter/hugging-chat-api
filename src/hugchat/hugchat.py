@@ -2,7 +2,7 @@ from requests import Session
 import requests
 import json
 import os
-import uuid
+import datetime
 import logging
 import typing
 import traceback
@@ -12,7 +12,21 @@ from requests.sessions import RequestsCookieJar
 
 from .message import Message
 from . import exceptions
+from dataclasses import dataclass
 
+@dataclass
+class MessageNode:
+    '''
+    huggingchat message node, currently only maintain id, role, date and content.
+    '''
+    id: str
+    role: str # "user", "system", or "assistant"
+    content: str
+    created_at: float # timestamp
+    updated_at: float # timestamp
+    
+    def __str__(self) -> str:
+        return f"MessageNode(id={self.id}, role={self.role}, content={self.content}, created_at={self.created_at}, updated_at={self.updated_at})"
 
 class Conversation:
     def __init__(
@@ -21,7 +35,7 @@ class Conversation:
         title: str = None,
         model: 'Model' = None,
         system_prompt: str = None,
-        history: list = [],
+        history: list = []
     ):
         """
         Returns a conversation object
@@ -35,7 +49,6 @@ class Conversation:
 
     def __str__(self) -> str:
         return self.id
-
 
 class Model:
     def __init__(
@@ -120,7 +133,6 @@ class ChatBot:
         self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
         self.conversation_list = []
-        self.__not_summarize_cids = []
         self.accepted_welcome_modal = (
             False  # It is no longer required to accept the welcome modal
         )
@@ -234,7 +246,6 @@ class ChatBot:
         _header = self.get_headers(ref=False)
         _header["Referer"] = "https://huggingface.co/chat"
 
-        resp = ""
         while True:
             try:
                 resp = self.session.post(
@@ -255,13 +266,11 @@ class ChatBot:
                 c = Conversation(id=cid, system_prompt=system_prompt, model=model)
 
                 self.conversation_list.append(c)
-                self.__not_summarize_cids.append(
-                    cid
-                )  # For the 1st chat, the conversation needs to be summarized.
-                self.__preserve_context(cid=cid, ending="1_1")
-
                 if switch_to:
                     self.change_conversation(c)
+                
+                # we need know the root message id (a.k.a system prompt message id).
+                self.get_conversation_info(c)
 
                 return c
 
@@ -276,9 +285,9 @@ class ChatBot:
                     )
                 continue
 
-    def change_conversation(self, conversation_object: Conversation) -> bool:
+    def change_conversation(self, conversation_object: Conversation):
         """
-        Change the current conversation to another one. Need a valid conversation id.
+        Change the current conversation to another one.
         """
 
         local_conversation = self.get_conversation_from_id(conversation_object.id)
@@ -287,6 +296,8 @@ class ChatBot:
             raise exceptions.InvalidConversationIDError(
                 "Invalid conversation id, not in conversation list."
             )
+            
+        self.get_conversation_info(local_conversation)
 
         self.current_conversation = local_conversation
 
@@ -412,33 +423,6 @@ class ChatBot:
         else:
             raise IndexError("Out of range of llm index")
 
-        # flag = True
-        # if isinstance(to, str):
-        #     if to not in self.llms:
-        #         flag = False
-        #     else:
-        #         to = self.llms.index(to)
-        # if to < 0 or to > len(self.llms):
-        #     flag = False
-        # if not flag:
-        #     raise BaseException("Can't switch llm, unexpected index. For now, 0 is `meta-llama/Llama-2-70b-chat-hf`, 1 is `OpenAssistant/oasst-sft-6-llama-30b-xor`, 2 is 'codellama/CodeLlama-34b-Instruct-hf', 3 is 'tiiuae/falcon-180B-chat':)")
-        # self.active_model = to
-        # return True
-
-        # response = self.session.post(self.hf_base_url + "/chat/settings", headers=self.get_headers(ref=True), cookies=self.get_cookies(), allow_redirects=True, data={
-        #     "shareConversationsWithModelAuthors": "on",
-        #     "ethicsModalAcceptedAt": "",
-        #     "searchEnabled": "true",
-        #     "activeModel": mdl,
-        # })
-        # check = self.check_operation()
-        # if check:
-        #     self.active_model = mdl
-        #     return True
-        # else:
-        #     print(f"Switch LLM {llms[to]} failed. Please submit an issue to https://github.com/Soulter/hugging-chat-api")
-        #     return False
-
     def get_llm_from_name(self, name: str) -> Union[Model, None]:
         for model in self.llms:
             if model.name == name:
@@ -553,7 +537,7 @@ class ChatBot:
 
         return conversations
 
-    def get_conversation_info(self, conversation: Conversation = None):
+    def get_conversation_info(self, conversation: Conversation = None) -> Conversation:
         """
         Fetches information related to the specified conversation. Returns the conversation object.
         """
@@ -578,13 +562,21 @@ class ChatBot:
         conversation.system_prompt = data[data[0]["preprompt"]]
         conversation.title = data[data[0]["title"]]
 
-        messages = data[data[0]["messages"]]
+        messages: list = data[data[0]["messages"]]
         conversation.history = []
-
-        for index in messages:
-            message = data[data[index]["content"]].strip()
-
-            conversation.history.append(message)
+        
+        # parse all message nodes (history) in the conversation
+        for index in messages: # node's index
+            _node_meta = data[index]
+            conversation.history.append(MessageNode(
+                id=data[_node_meta["id"]],
+                role=data[_node_meta["from"]],
+                content=data[_node_meta["content"]],
+                created_at=datetime.datetime.strptime(data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp(),
+                updated_at=datetime.datetime.strptime(data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+            ))
+            
+        logging.debug(f"conversation {conversation.id} history: {conversation.history}")
 
         return conversation
 
@@ -598,15 +590,6 @@ class ChatBot:
                 if return_index:
                     return i
                 return conversation
-
-    def check_operation(self) -> bool:
-        r = self.session.post(
-            self.hf_base_url
-            + f"/chat/conversation/{self.current_conversation}/__data.json?x-sveltekit-invalidated=1_1",
-            headers=self.get_headers(ref=True),
-            cookies=self.get_cookies(),
-        )
-        return r.status_code == 200
 
     def _stream_query(
         self,
@@ -634,42 +617,38 @@ class ChatBot:
             raise Exception("the parameter retry_count must be greater than 0.")
         if text == "":
             raise Exception("the prompt can not be empty.")
+        if len(conversation.history) == 0:
+            raise Exception("conversation history is empty, but we need the root message id of this conversation to continue.")  
+    
+        # get last message id
+        last_assistant_message = conversation.history[-1]
+        logging.debug(f"conversation {conversation.id} last message id: {last_assistant_message.id}")
 
         req_json = {
+            "files": [],
+            "id": last_assistant_message.id,
             "inputs": text,
-            "parameters": {
-                "temperature": temperature,
-                "top_p": top_p,
-                "repetition_penalty": repetition_penalty,
-                "top_k": top_k,
-                "truncate": truncate,
-                "watermark": watermark,
-                "max_new_tokens": max_new_tokens,
-                "stop": stop,
-                "return_full_text": return_full_text,
-                "stream": True,
-            },
-            "options": {
-                "use_cache": use_cache,
-                "is_retry": is_retry,
-                "id": str(uuid.uuid4()),
-            },
-            "stream": True,
+            "is_continue": False,
+            "is_retry": is_retry,
             "web_search": web_search,
         }
         headers = {
-            "Origin": "https://huggingface.co",
-            "Referer": f"https://huggingface.co/chat/conversation/{conversation}",
-            "Content-Type": "application/json",
-            "Sec-ch-ua": '"Chromium";v="94", "Microsoft Edge";v="94", ";Not A Brand";v="99"',
-            "Sec-ch-ua-mobile": "?0",
-            "Sec-ch-ua-platform": '"Windows"',
-            "Accept": "*/*",
-            "Accept-language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+            'authority': 'huggingface.co',
+            'accept': '*/*',
+            'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6',
+            'content-type': 'application/json',
+            'origin': 'https://huggingface.co',
+            'sec-ch-ua': '"Microsoft Edge";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
         }
-        last_obj = {}
+        final_answer = {}
 
-        break_label = False
+        break_flag = False
 
         while retry_count > 0:
             resp = self.session.post(
@@ -696,28 +675,12 @@ class ChatBot:
                         _type = obj["type"]
 
                         if _type == "finalAnswer":
-                            last_obj = obj
-                            break_label = True
+                            final_answer = obj
+                            break_flag = True
                             break
                     else:
                         logging.error(f"No `type` found in response: {obj}")
                     yield obj
-                    # if _stream_yield_all:
-                    # else:
-                    #     if _type == "status":
-                    #         continue
-                    #     elif _type == "stream":
-                    #         yield obj
-                    #     elif _type == "finalAnswer":
-                    #         last_obj = obj
-                    #         break_label = True
-                    #         break
-                    #     elif _type == "webSearch":
-                    #         continue
-                    #     elif "error" in obj:
-                    #         raise ChatError(obj["error"])
-                    #     else:
-                    #         raise ChatError(obj)
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
@@ -728,18 +691,12 @@ class ChatBot:
                     )
                 logging.debug(resp.headers)
                 raise exceptions.ChatError(f"Failed to parse response: {res}")
-            if break_label:
+            if break_flag:
                 break
-
-        try:
-            # if self.current_conversation in self.__not_summarize_cids:
-            #     self.summarize_conversation()
-            #     self.__not_summarize_cids.remove(self.current_conversation)
-            self.__preserve_context(ref_cid=conversation.id)
-        except:
-            pass
-
-        yield last_obj
+        
+        # update the history of current conversation
+        self.get_conversation_info(conversation)
+        yield final_answer
 
     def query(
         self,
@@ -815,27 +772,6 @@ class ChatBot:
             web_search=web_search,
         )
         return msg
-
-    def __preserve_context(
-        self, cid: str = None, ending: str = "1_", ref_cid: str = ""
-    ) -> bool:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203",
-            "Accept": "*/*",
-        }
-        if ref_cid == "":
-            headers["Referer"] = "https://huggingface.co/chat"
-        else:
-            headers["Referer"] = f"https://huggingface.co/chat/conversation/{ref_cid}"
-        # print(headers)
-        cookie = {
-            "hf-chat": self.get_cookies()["hf-chat"],
-        }
-        if cid is None:
-            cid = self.current_conversation
-        url = f"https://huggingface.co/chat/conversation/{cid}/__data.json?x-sveltekit-invalidated={ending}"
-        response = self.session.get(url, cookies=cookie, headers=headers, data={})
-        return response.status_code == 200
 
 
 if __name__ == "__main__":
