@@ -14,18 +14,15 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 > **Note**
 >
 > Some recent versions may no longer be fully backward compatible to some extent, a good idea is to review this README or issues promptly after any problem arise.
+> **Custom parameters(temprature, max_token, etc) is no longer supported**
 > 
 > Recently new updates:
-> - **Custom parameters(temprature, max_token, etc) is no longer supported**
+> - Assistant(Image Generator, etc)
 > - Web search
 > - Memorize context
-> - Supports for changing LLMs ([#56](https://github.com/Soulter/hugging-chat-api/issues/56)) (v0.0.9)
+> - Supports for changing LLMs
 
 ## Installation
-```bash
-pip install hugchat
-```
-or
 ```bash
 pip3 install hugchat
 ```
@@ -41,52 +38,46 @@ from hugchat import hugchat
 from hugchat.login import Login
 
 # Log in to huggingface and grant authorization to huggingchat
-sign = Login(email, passwd)
-cookies = sign.login()
+EMAIL = "your email"
+PASSWD = "your password"
+cookie_path_dir = "./cookies"
+sign = Login(EMAIL, PASSWD)
+cookies = sign.login(cookie_dir_path=cookie_path_dir, save_cookies=True)
 
-# Save cookies to the local directory
-cookie_path_dir = "./cookies_snapshot"
-sign.saveCookiesToDir(cookie_path_dir)
-
-# Load cookies when you restart your program:
-# sign = login(email, None)
-# cookies = sign.loadCookiesFromDir(cookie_path_dir) # This will detect if the JSON file exists, return cookies if it does and raise an Exception if it's not.
-
-# Create a ChatBot
+# Create your ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
 
-# non stream response
-query_result = chatbot.query("Hi!")
+# Non stream response
+query_result = chatbot.chat("Hi!")
 print(query_result) # or query_result.text or query_result["text"]
 
-# stream response
+# Stream response
 for resp in chatbot.query(
     "Hello",
     stream=True
 ):
     print(resp)
 
-# Use web search (new feature)
+# Web search (new feature)
 query_result = chatbot.query("Hi!", web_search=True)
-print(query_result) # or query_result.text or query_result["text"]
+print(query_result)
 for source in query_result.web_search_sources:
     print(source.link)
     print(source.title)
     print(source.hostname)
 
 # Create a new conversation
-id = chatbot.new_conversation()
-chatbot.change_conversation(id)
+chatbot.new_conversation(switch_to = True) # switch to the new conversation
 
-# Get conversation list(all conversations in your account)
-conversation_list = chatbot.get_remote_conversations()
+# Get conversations on the server that are not from the current session (all your conversations in huggingchat)
+conversation_list = chatbot.get_remote_conversations(replace_conversation_list=True)
 # Get conversation list(local)
 conversation_list = chatbot.get_conversation_list()
 
 # Get the available models (not hardcore)
 models = chatbot.get_available_llm_models()
 
-# Switch model to the given index
+# Switch model with given index
 chatbot.switch_llm(0) # Switch to the first model
 chatbot.switch_llm(1) # Switch to the second model
 
@@ -94,8 +85,10 @@ chatbot.switch_llm(1) # Switch to the second model
 info = chatbot.get_conversation_info()
 print(info.id, info.title, info.model, info.system_prompt, info.history)
 
-# Get conversations on the server that are not from the current session (all your conversations in huggingchat)
-chatbot.get_remote_conversations(replace_conversation_list=True)
+# Assistant
+assistant = chatbot.search_assistant(assistant_name="ChatGpt") # assistant name list in https://huggingface.co/chat/assistants
+assistant_list = chatbot.get_assistant_list_by_page(page=0)
+chatbot.new_conversation(assistant=assistant, switch_to=True) # create a new conversation with assistant
 
 # [DANGER] Delete all the conversations for the logged in user
 chatbot.delete_all_conversations()
