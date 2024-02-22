@@ -15,6 +15,15 @@ from . import exceptions
 from dataclasses import dataclass
 
 @dataclass
+class Assistant:
+    assistant_id: str
+    author: str
+    name: str
+    model_name: str
+    pre_prompt: str
+    description: str 
+
+@dataclass
 class MessageNode:
     '''
     huggingchat message node, currently only maintain id, role, date and content.
@@ -106,6 +115,7 @@ class ChatBot:
     ) -> None:
         """
         Returns a ChatBot object
+        default_llm: name or index
         """
         if cookies is None and cookie_path == "":
             raise exceptions.ChatBotInitError(
@@ -221,10 +231,21 @@ class ChatBot:
         return True
 
     def new_conversation(
-        self, modelIndex: int = None, system_prompt: str = "", switch_to: bool = False
+        self, 
+        modelIndex: int = None, 
+        system_prompt: str = "", 
+        switch_to: bool = False,
+        assistant: Union[str, Assistant] = None,
     ) -> Conversation:
         """
-        Create a new conversation. Return the conversation object. You should change the conversation by calling change_conversation() after calling this method.
+        Create a new conversation. Return a conversation object. 
+        
+        modelIndex: int, get it from get_available_llm_models(). If None, use the default model.
+        assistant: str or Assistant, the assistant **id** or assistant object. Use search_assistant() to get the assistant object.
+        
+        - You should change the conversation by calling change_conversation() after calling this method. Or set param switch_to to True.
+        - if you use assistant, the parameter `system_prompt` will be ignored.
+        
         """
         err_count = 0
 
@@ -245,17 +266,29 @@ class ChatBot:
 
         _header = self.get_headers(ref=False)
         _header["Referer"] = "https://huggingface.co/chat"
+        
+        request = {
+            "model": model.id,
+        }
+        
+        # get assistant id
+        if assistant is not None:
+            assistant_id = None
+            if isinstance(assistant, str):
+                assistant_id = assistant
+            elif isinstance(assistant, Assistant):
+                assistant_id = assistant.assistant_id
+            else:
+                raise ValueError("param assistant must be a string or Assistant object.")
+            request["assistantId"] = assistant_id
+        else:
+            request["preprompt"] = system_prompt if system_prompt != "" else model.preprompt
 
         while True:
             try:
                 resp = self.session.post(
                     self.hf_base_url + "/chat/conversation",
-                    json={
-                        "model": model.id,
-                        "preprompt": system_prompt
-                        if system_prompt != ""
-                        else model.preprompt,
-                    },
+                    json=request,
                     headers=_header,
                     cookies=self.get_cookies(),
                 )
@@ -590,6 +623,70 @@ class ChatBot:
                 if return_index:
                     return i
                 return conversation
+            
+    def _parse_assistants(self, nodes_data: list) -> list[Assistant]:
+        '''
+        parse the assistants data from the response.
+        '''
+        index = nodes_data[1]
+        ret = []
+        for i in index:
+            attribute_map: dict = nodes_data[i]
+            assistant_id = nodes_data[attribute_map['_id']]
+            author = nodes_data[attribute_map['createdByName']]
+            name = nodes_data[attribute_map['name']].strip()
+            model_name = nodes_data[attribute_map['modelId']]
+            pre_prompt = nodes_data[attribute_map['preprompt']]
+            description = nodes_data[attribute_map['description']]
+            ret.append(Assistant(
+                assistant_id,
+                author,
+                name,
+                model_name,
+                pre_prompt,
+                description
+            ))
+        return ret
+
+    def get_assistant_list_by_page(self, page: int) -> list[Assistant]:
+        '''
+        get assistant list by page number.
+        if page < 0 or page > max_page then return `None`.
+        '''
+        url_cache = f"https://api.soulter.top/hugchat/assistants/__data.json?p={page}"
+        url = f"https://huggingface.co/chat/assistants/__data.json?p={page}&x-sveltekit-invalidated=01"
+        try:
+            res = requests.get(url_cache, timeout=5)
+        except BaseException:
+            res = self.session.get(url, timeout=10)
+        res = res.json()
+        if res['nodes'][1]['type'] == 'error':
+            return None
+        # here we parse the result
+        return self._parse_assistants(res['nodes'][1]['data'])
+        
+    def search_assistant(self, assistant_name: str = None, assistant_id: str = None) -> Assistant:
+        '''
+        - Search an available assistant by assistant name or assistant id.
+        - Will search on api.soulter.top/hugchat because offifial api doesn't support search.
+        - Return the `Assistant` object if found, return None if not found.
+        '''
+        if not assistant_name and not assistant_id:
+            raise ValueError("assistant_name and assistant_id can not be both None.")
+        if assistant_name:
+            url = f"https://api.soulter.top/hugchat/assistant?name={assistant_name}"
+        else:
+            url = f"https://api.soulter.top/hugchat/assistant?id={assistant_id}"
+        res = requests.get(url, timeout=10)
+        if res.status_code != 200:
+            raise Exception(f"Failed to search assistant with status code: {res.status_code}, please commit an issue to https://github.com/Soulter/hugging-chat-api/issues")
+        res = res.json()
+        if not res['data']:
+            # empty dict
+            return None
+        if res['code'] != 0:
+            raise Exception(f"Failed to search assistant with server's error: {res['message']}, please commit an issue to https://github.com/Soulter/hugging-chat-api/issues")
+        return Assistant(**res['data'])
 
     def _stream_query(
         self,
@@ -745,7 +842,7 @@ class ChatBot:
     ) -> Message:
         """
         Send a message to the current conversation. Return a Message object.
-        You can customize these optional parameters (**Deprecated**).
+        
         You can turn on the web search by set the parameter `web_search` to True
 
         Stream is now the default mode, you can call Message.wait_until_done()
