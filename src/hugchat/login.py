@@ -19,23 +19,35 @@ class Login:
         }
         self.cookies = requests.sessions.RequestsCookieJar()
 
-    def login(self) -> requests.sessions.RequestsCookieJar:
+    def login(self, cookie_dir_path: str = None, save_cookies: bool = False) -> requests.sessions.RequestsCookieJar:
+        '''
+        Login to huggingface.co with given email and password.
+        - If cookie_dir_path is given, load cookies from the path. If path is not exist, raise an exception.
+        - If save_cookies is True, save cookies to the givev path (if cookie_dir_path is not given, save to default path `./usercookies`).
+        - Return cookies if login success, otherwise raise an exception.
+        '''
+
+        if cookie_dir_path:
+            return self.load_cookies(cookie_dir_path)
+
         self._sign_in_with_email()
         location = self._get_auth_url()
         if self._grant_auth(location):
+            if save_cookies:
+                self.save_cookies(cookie_dir_path)
             return self.cookies
         else:
             raise Exception(f"Grant auth fatal, please check your email or password\ncookies gained: \n{self.cookies}")
         
-    def save_cookies_to_dir(self, cookie_dir_path: str = None) -> str:
+    def save_cookies(self, cookie_dir_path: str = './usercookies') -> str:
         '''
         cookies will be saved into: cookie_dir_path/<email>.json
         '''
         return self.saveCookiesToDir(cookie_dir_path)
         
-    def saveCookiesToDir(self, cookie_dir_path: str = None) -> str:
+    def saveCookiesToDir(self, cookie_dir_path: str = './usercookies') -> str:
         """
-        alias of save_cookies_to_dir
+        alias of save_cookies
         """
         cookie_dir_path = self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
         if not cookie_dir_path.endswith("/"):
@@ -50,15 +62,15 @@ class Login:
             f.write(json.dumps(self.cookies.get_dict()))
         return cookie_path
     
-    def load_cookies_from_dir(self, cookie_dir_path: str = None) -> requests.sessions.RequestsCookieJar:
+    def load_cookies(self, cookie_dir_path: str = './usercookies') -> requests.sessions.RequestsCookieJar:
         '''
         cookies will be loaded from: cookie_dir_path/<email>.json
         '''
         return self.loadCookiesFromDir(cookie_dir_path)
     
-    def loadCookiesFromDir(self, cookie_dir_path: str = None) -> requests.sessions.RequestsCookieJar:
+    def loadCookiesFromDir(self, cookie_dir_path: str = './usercookies') -> requests.sessions.RequestsCookieJar:
         """
-        alias of load_cookies_from_dir
+        alias of load_cookies
         """
         cookie_dir_path = self.DEFAULT_PATH_DIR if not cookie_dir_path else cookie_dir_path
         cookie_path = self._get_cookie_path(cookie_dir_path)
