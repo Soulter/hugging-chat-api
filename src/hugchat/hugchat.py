@@ -6,7 +6,7 @@ import datetime
 import logging
 import typing
 import traceback
-from typing import Union
+from typing import Union, List, Dict
 
 from requests.sessions import RequestsCookieJar
 
@@ -624,7 +624,7 @@ class ChatBot:
                     return i
                 return conversation
             
-    def _parse_assistants(self, nodes_data: list) -> list[Assistant]:
+    def _parse_assistants(self, nodes_data: list) -> List[Assistant]:
         '''
         parse the assistants data from the response.
         '''
@@ -648,7 +648,7 @@ class ChatBot:
             ))
         return ret
 
-    def get_assistant_list_by_page(self, page: int) -> list[Assistant]:
+    def get_assistant_list_by_page(self, page: int) -> List[Assistant]:
         '''
         get assistant list by page number.
         if page < 0 or page > max_page then return `None`.
