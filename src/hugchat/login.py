@@ -99,7 +99,7 @@ class Login:
         self._refresh_cookies(res.cookies)
         return res
 
-    def _requests_post(self, url: str, headers=None, params=None, data=None, stream=False,
+    def _request_post(self, url: str, headers=None, params=None, data=None, stream=False,
                      allow_redirects=True) -> requests.Response:
         res = requests.post(
             url,
