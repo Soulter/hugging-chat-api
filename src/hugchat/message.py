@@ -219,11 +219,7 @@ class Message(Generator):
         web search result will be set to `done` once the token is received
         """
         return self.web_search_done
-
-    """
-    For backward compatibility, we have to add these functions:
-    """
-
+    
     def __str__(self):
         return self.wait_until_done()
 
