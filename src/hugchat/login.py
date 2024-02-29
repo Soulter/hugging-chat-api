@@ -27,8 +27,16 @@ class Login:
         - Return cookies if login success, otherwise raise an exception.
         '''
 
-        if cookie_dir_path:
-            return self.load_cookies(cookie_dir_path)
+        # validate cookies content before use
+        if os.path.exists(cookie_dir_path) and os.path.exists(self._get_cookie_path(cookie_dir_path)):
+            with open(self._get_cookie_path(cookie_dir_path),'r+') as f_cookies:
+                cookies = json.load(f_cookies)
+                try:
+                    list(cookies.keys()).index('token')
+                    list(cookies.keys()).index('hf-chat')
+                    return self.load_cookies(cookie_dir_path)
+                except Exception as e:
+                    print('error during validating cookies')    
 
         self._sign_in_with_email()
         location = self._get_auth_url()
