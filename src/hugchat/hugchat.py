@@ -149,7 +149,7 @@ class ChatBot:
 
         self.llms = self.get_remote_llms()
 
-        if isinstance(type(default_llm), str):
+        if isinstance(default_llm, str):
             self.active_model = self.get_llm_from_name(default_llm)
             if self.active_model is None:
                 raise Exception(
