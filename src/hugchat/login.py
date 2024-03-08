@@ -26,9 +26,20 @@ class Login:
         - If save_cookies is True, save cookies to the givev path (if cookie_dir_path is not given, save to default path `./usercookies`).
         - Return cookies if login success, otherwise raise an exception.
         '''
+        
+        if not cookie_dir_path:
+            cookie_dir_path = self.DEFAULT_PATH_DIR
 
-        if cookie_dir_path:
-            return self.load_cookies(cookie_dir_path)
+        # validate cookies content before use
+        if os.path.exists(cookie_dir_path) and os.path.exists(self._get_cookie_path(cookie_dir_path)):
+            with open(self._get_cookie_path(cookie_dir_path),'r+') as f_cookies:
+                cookies = json.load(f_cookies)
+                try:
+                    list(cookies.keys()).index('token')
+                    list(cookies.keys()).index('hf-chat')
+                    return self.load_cookies(cookie_dir_path)
+                except Exception as e:
+                    print('error during validating cookies')
 
         self._sign_in_with_email()
         location = self._get_auth_url()
