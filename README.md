@@ -40,7 +40,7 @@ from hugchat.login import Login
 # Log in to huggingface and grant authorization to huggingchat
 EMAIL = "your email"
 PASSWD = "your password"
-cookie_path_dir = "./cookies"
+cookie_path_dir = "./cookies/" # NOTE: trailing slash (/) is required to avoid errors
 sign = Login(EMAIL, PASSWD)
 cookies = sign.login(cookie_dir_path=cookie_path_dir, save_cookies=True)
 
