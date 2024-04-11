@@ -3,11 +3,11 @@ from typing import Generator, Union
 from .exceptions import ChatError, ModelOverloadedError
 import json
 
-
-MSGTYPE_FINAL = "finalAnswer"
-MSGTYPE_STREAM = "stream"
-MSGTYPE_WEB = "webSearch"
-MSGTYPE_STATUS = "status"
+RESPONSE_TYPE_FINAL = "finalAnswer"
+RESPONSE_TYPE_STREAM = "stream"
+RESPONSE_TYPE_WEB = "webSearch"
+RESPONSE_TYPE_STATUS = "status"
+MSGTYPE_ERROR = "error"
 
 MSGSTATUS_PENDING = 0
 MSGSTATUS_RESOLVED = 1
@@ -20,13 +20,11 @@ class WebSearchSource:
     hostname: str
 
     def __str__(self):
-        return json.dumps(
-            {
-                "title": self.title,
-                "link": self.link,
-                "hostname": self.hostname,
-            }
-        )
+        return json.dumps({
+            "title": self.title,
+            "link": self.link,
+            "hostname": self.hostname,
+        })
 
 
 class Message(Generator):
@@ -93,27 +91,20 @@ class Message(Generator):
             if self.error is not None:
                 raise self.error
             else:
-                raise Exception("Message stauts is `Rejected` but no error found")
+                raise Exception(
+                    "Message stauts is `Rejected` but no error found")
 
         try:
             a: dict = next(self.g)
             self._filterResponse(a)
             t: str = a["type"]
             message_type: str = ""
-            if "messageType" in a:
-                message_type: str = a["messageType"]
-            if message_type == "error":
-                self.error = ChatError(a["message"])
-                self.msg_status = MSGSTATUS_REJECTED
-            if t == MSGTYPE_STREAM:
-                self.web_search_done = True
-            elif t == MSGTYPE_STATUS:
-                pass
-            elif t == MSGTYPE_FINAL:
+            if t == RESPONSE_TYPE_FINAL:
                 self.text = a["text"]
                 self.msg_status = MSGSTATUS_RESOLVED
-            elif t == MSGTYPE_WEB:
-                if a.__contains__("sources"):
+            elif t == RESPONSE_TYPE_WEB:
+                # gracefully pass unparseable webpages
+                if message_type != MSGTYPE_ERROR and a.__contains__("sources"):
                     self.web_search_sources.clear()
                     sources = a["sources"]
                     for source in sources:
@@ -122,25 +113,38 @@ class Message(Generator):
                         wss.link = source["link"]
                         wss.hostname = source["hostname"]
                         self.web_search_sources.append(wss)
+            elif "messageType" in a:
+                message_type: str = a["messageType"]
+                if message_type == MSGTYPE_ERROR:
+                    self.error = ChatError(a["message"])
+                    self.msg_status = MSGSTATUS_REJECTED
+                if t == RESPONSE_TYPE_STREAM:
+                    self.web_search_done = True
+                elif t == RESPONSE_TYPE_STATUS:
+                    pass
             else:
                 if "Model is overloaded" in str(a):
                     self.error = ModelOverloadedError(
                         "Model is overloaded, please try again later or switch to another model."
                     )
                     self.msg_status = MSGSTATUS_REJECTED
-                elif a.__contains__("error"):
-                    self.error = ChatError(a["error"])
+                elif a.__contains__(MSGTYPE_ERROR):
+                    self.error = ChatError(a[MSGTYPE_ERROR])
                     self.msg_status = MSGSTATUS_REJECTED
                 else:
                     self.error = ChatError(f"Unknown json response: {a}")
 
             # If _stream_yield_all is True, yield all responses from the server.
-            if self._stream_yield_all or t == MSGTYPE_STREAM:
+            if self._stream_yield_all or t == RESPONSE_TYPE_STREAM:
                 return a
             else:
                 return self.__next__()
         except StopIteration:
-            # print("meet stop:", self.msg_status)
+            if self.msg_status == MSGSTATUS_PENDING:
+                self.error = ChatError(
+                    "Stream of responses has abruptly ended (final answer has not been received)."
+                )
+                raise self.error
             pass
         except Exception as e:
             # print("meet error: ", str(e))
@@ -219,7 +223,7 @@ class Message(Generator):
         web search result will be set to `done` once the token is received
         """
         return self.web_search_done
-    
+
     def __str__(self):
         return self.wait_until_done()
 
