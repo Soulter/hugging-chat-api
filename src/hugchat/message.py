@@ -62,7 +62,8 @@ class Message(Generator):
     web_search: bool = False
 
     web_search_sources: list = []
-    text: str = ""  # For backward compatibility, we have to reserve the `text` field.
+    # For backward compatibility, we have to reserve the `text` field.
+    text: str = ""
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
     error: Union[Exception, None] = None

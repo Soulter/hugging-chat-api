@@ -1,4 +1,3 @@
-from requests import Session
 import requests
 import json
 import os
@@ -6,98 +5,21 @@ import datetime
 import logging
 import typing
 import traceback
-from typing import Union, List, Dict
 
+from typing import Union, List
+from requests import Session
 from requests.sessions import RequestsCookieJar
 
 from .message import Message
 from . import exceptions
-from dataclasses import dataclass
+from .types.assistant import Assistant
+from .types.model import Model
+from .types.message import MessageNode, Conversation
 
-@dataclass
-class Assistant:
-    assistant_id: str
-    author: str
-    name: str
-    model_name: str
-    pre_prompt: str
-    description: str 
 
-@dataclass
-class MessageNode:
-    '''
-    huggingchat message node, currently only maintain id, role, date and content.
-    '''
-    id: str
-    role: str # "user", "system", or "assistant"
-    content: str
-    created_at: float # timestamp
-    updated_at: float # timestamp
-    
-    def __str__(self) -> str:
-        return f"MessageNode(id={self.id}, role={self.role}, content={self.content}, created_at={self.created_at}, updated_at={self.updated_at})"
-
-class Conversation:
-    def __init__(
-        self,
-        id: str = None,
-        title: str = None,
-        model: 'Model' = None,
-        system_prompt: str = None,
-        history: list = []
-    ):
-        """
-        Returns a conversation object
-        """
-
-        self.id: str = id
-        self.title: str = title
-        self.model = model
-        self.system_prompt: str = system_prompt
-        self.history: list = history
-
-    def __str__(self) -> str:
-        return self.id
-
-class Model:
-    def __init__(
-        self,
-        id: str = None,
-        name: str = None,
-        displayName: str = None,
-        preprompt: str = None,
-        promptExamples: list = None,
-        websiteUrl: str = None,
-        description: str = None,
-        datasetName: str = None,
-        datasetUrl: str = None,
-        modelUrl: str = None,
-        parameters: dict = None,
-    ):
-        """
-        Returns a model object
-        """
-
-        self.id: str = id
-        self.name: str = name
-        self.displayName: str = displayName
-
-        self.preprompt: str = preprompt
-        self.promptExamples: list = promptExamples
-        self.websiteUrl: str = websiteUrl
-        self.description: str = description
-
-        self.datasetName: str = datasetName
-        self.datasetUrl: str = datasetUrl
-        self.modelUrl: str = modelUrl
-        self.parameters: dict = parameters
-
-    def __str__(self) -> str:
-        return self.id
-
-# we need to keep this for backward compatibility, because some people may use it.
 conversation = Conversation
 model = Model
+
 
 class ChatBot:
     cookies: dict
@@ -122,7 +44,8 @@ class ChatBot:
                 "Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api"
             )
         elif cookies is not None and cookie_path != "":
-            raise exceptions.ChatBotInitError("Both cookies and cookie_path provided")
+            raise exceptions.ChatBotInitError(
+                "Both cookies and cookie_path provided")
 
         if cookies is None and cookie_path != "":
             # read cookies from path
@@ -158,7 +81,8 @@ class ChatBot:
         else:
             self.active_model = self.llms[default_llm]
 
-        self.current_conversation = self.new_conversation(system_prompt=system_prompt)
+        self.current_conversation = self.new_conversation(
+            system_prompt=system_prompt)
 
     def get_hc_session(self) -> Session:
         session = Session()
@@ -231,21 +155,21 @@ class ChatBot:
         return True
 
     def new_conversation(
-        self, 
-        modelIndex: int = None, 
-        system_prompt: str = "", 
+        self,
+        modelIndex: int = None,
+        system_prompt: str = "",
         switch_to: bool = False,
         assistant: Union[str, Assistant] = None,
     ) -> Conversation:
         """
         Create a new conversation. Return a conversation object. 
-        
+
         modelIndex: int, get it from get_available_llm_models(). If None, use the default model.
         assistant: str or Assistant, the assistant **id** or assistant object. Use search_assistant() to get the assistant object.
-        
+
         - You should change the conversation by calling change_conversation() after calling this method. Or set param switch_to to True.
         - if you use assistant, the parameter `system_prompt` will be ignored.
-        
+
         """
         err_count = 0
 
@@ -266,11 +190,11 @@ class ChatBot:
 
         _header = self.get_headers(ref=False)
         _header["Referer"] = "https://huggingface.co/chat"
-        
+
         request = {
             "model": model.id,
         }
-        
+
         # get assistant id
         if assistant is not None:
             assistant_id = None
@@ -279,7 +203,8 @@ class ChatBot:
             elif isinstance(assistant, Assistant):
                 assistant_id = assistant.assistant_id
             else:
-                raise ValueError("param assistant must be a string or Assistant object.")
+                raise ValueError(
+                    "param assistant must be a string or Assistant object.")
             request["assistantId"] = assistant_id
         else:
             request["preprompt"] = system_prompt if system_prompt != "" else model.preprompt
@@ -296,12 +221,13 @@ class ChatBot:
                 logging.debug(resp.text)
                 cid = json.loads(resp.text)["conversationId"]
 
-                c = Conversation(id=cid, system_prompt=system_prompt, model=model)
+                c = Conversation(
+                    id=cid, system_prompt=system_prompt, model=model)
 
                 self.conversation_list.append(c)
                 if switch_to:
                     self.change_conversation(c)
-                
+
                 # we need know the root message id (a.k.a system prompt message id).
                 self.get_conversation_info(c)
 
@@ -323,13 +249,14 @@ class ChatBot:
         Change the current conversation to another one.
         """
 
-        local_conversation = self.get_conversation_from_id(conversation_object.id)
+        local_conversation = self.get_conversation_from_id(
+            conversation_object.id)
 
         if local_conversation is None:
             raise exceptions.InvalidConversationIDError(
                 "Invalid conversation id, not in conversation list."
             )
-            
+
         self.get_conversation_info(local_conversation)
 
         self.current_conversation = local_conversation
@@ -405,7 +332,8 @@ class ChatBot:
             )
         else:
             self.conversation_list.pop(
-                self.get_conversation_from_id(conversation_object.id, return_index=True)
+                self.get_conversation_from_id(
+                    conversation_object.id, return_index=True)
             )
 
             if conversation_object is self.current_conversation:
@@ -421,7 +349,8 @@ class ChatBot:
         """
         Sets the "Share Conversation with Model Authors setting" to the given val variable
         """
-        settings = {"shareConversationsWithModelAuthors": ("", "on" if val else "")}
+        settings = {"shareConversationsWithModelAuthors": (
+            "", "on" if val else "")}
 
         r = self.session.post(
             self.hf_base_url + "/chat/settings",
@@ -483,7 +412,8 @@ class ChatBot:
         modelsIndices = data[data[0]["models"]]
         model_list = []
 
-        return_data_from_index = lambda index: None if index == -1 else data[index]
+        def return_data_from_index(
+            index): return None if index == -1 else data[index]
 
         for modelIndex in modelsIndices:
             model_data = data[modelIndex]
@@ -512,11 +442,13 @@ class ChatBot:
                     return_data_from_index(index) for index in prompt_list
                 ]
                 m.promptExamples = [
-                    {"title": data[prompt["title"]], "prompt": data[prompt["prompt"]]}
+                    {"title": data[prompt["title"]],
+                        "prompt": data[prompt["prompt"]]}
                     for prompt in _promptExamples
                 ]
 
-            indices_parameters_dict = return_data_from_index(model_data["parameters"])
+            indices_parameters_dict = return_data_from_index(
+                model_data["parameters"])
             out_parameters_dict = {}
             for key, value in indices_parameters_dict.items():
                 if value == -1:
@@ -524,7 +456,8 @@ class ChatBot:
                     continue
 
                 if isinstance(type(data[value]), list):
-                    out_parameters_dict[key] = [data[index] for index in data[value]]
+                    out_parameters_dict[key] = [data[index]
+                                                for index in data[value]]
                     continue
 
                 out_parameters_dict[key] = data[value]
@@ -579,7 +512,8 @@ class ChatBot:
             conversation = self.current_conversation
 
         r = self.session.post(
-            self.hf_base_url + f"/chat/conversation/{conversation.id}/__data.json",
+            self.hf_base_url +
+            f"/chat/conversation/{conversation.id}/__data.json",
             headers=self.get_headers(ref=False),
             cookies=self.get_cookies(),
         )
@@ -597,19 +531,22 @@ class ChatBot:
 
         messages: list = data[data[0]["messages"]]
         conversation.history = []
-        
+
         # parse all message nodes (history) in the conversation
-        for index in messages: # node's index
+        for index in messages:  # node's index
             _node_meta = data[index]
             conversation.history.append(MessageNode(
                 id=data[_node_meta["id"]],
                 role=data[_node_meta["from"]],
                 content=data[_node_meta["content"]],
-                created_at=datetime.datetime.strptime(data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp(),
-                updated_at=datetime.datetime.strptime(data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+                created_at=datetime.datetime.strptime(
+                    data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp(),
+                updated_at=datetime.datetime.strptime(
+                    data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
             ))
-            
-        logging.debug(f"conversation {conversation.id} history: {conversation.history}")
+
+        logging.debug(
+            f"conversation {conversation.id} history: {conversation.history}")
 
         return conversation
 
@@ -623,7 +560,7 @@ class ChatBot:
                 if return_index:
                     return i
                 return conversation
-            
+
     def _parse_assistants(self, nodes_data: list) -> List[Assistant]:
         '''
         parse the assistants data from the response.
@@ -664,7 +601,7 @@ class ChatBot:
             return None
         # here we parse the result
         return self._parse_assistants(res['nodes'][1]['data'])
-        
+
     def search_assistant(self, assistant_name: str = None, assistant_id: str = None) -> Assistant:
         '''
         - Search an available assistant by assistant name or assistant id.
@@ -672,20 +609,23 @@ class ChatBot:
         - Return the `Assistant` object if found, return None if not found.
         '''
         if not assistant_name and not assistant_id:
-            raise ValueError("assistant_name and assistant_id can not be both None.")
+            raise ValueError(
+                "assistant_name and assistant_id can not be both None.")
         if assistant_name:
             url = f"https://api.soulter.top/hugchat/assistant?name={assistant_name}"
         else:
             url = f"https://api.soulter.top/hugchat/assistant?id={assistant_id}"
         res = requests.get(url, timeout=10)
         if res.status_code != 200:
-            raise Exception(f"Failed to search assistant with status code: {res.status_code}, please commit an issue to https://github.com/Soulter/hugging-chat-api/issues")
+            raise Exception(
+                f"Failed to search assistant with status code: {res.status_code}, please commit an issue to https://github.com/Soulter/hugging-chat-api/issues")
         res = res.json()
         if not res['data']:
             # empty dict
             return None
         if res['code'] != 0:
-            raise Exception(f"Failed to search assistant with server's error: {res['message']}, please commit an issue to https://github.com/Soulter/hugging-chat-api/issues")
+            raise Exception(
+                f"Failed to search assistant with server's error: {res['message']}, please commit an issue to https://github.com/Soulter/hugging-chat-api/issues")
         return Assistant(**res['data'])
 
     def _stream_query(
@@ -704,22 +644,26 @@ class ChatBot:
         use_cache: bool = False,
         is_retry: bool = False,
         retry_count: int = 5,
-        _stream_yield_all: bool = False,  # yield all responses from the server.
+        # yield all responses from the server.
+        _stream_yield_all: bool = False,
         conversation: Conversation = None,
     ) -> typing.Generator[dict, None, None]:
         if conversation is None:
             conversation = self.current_conversation
 
         if retry_count <= 0:
-            raise Exception("the parameter retry_count must be greater than 0.")
+            raise Exception(
+                "the parameter retry_count must be greater than 0.")
         if text == "":
             raise Exception("the prompt can not be empty.")
         if len(conversation.history) == 0:
-            raise Exception("conversation history is empty, but we need the root message id of this conversation to continue.")  
-    
+            raise Exception(
+                "conversation history is empty, but we need the root message id of this conversation to continue.")
+
         # get last message id
         last_assistant_message = conversation.history[-1]
-        logging.debug(f"conversation {conversation.id} last message id: {last_assistant_message.id}")
+        logging.debug(
+            f"conversation {conversation.id} last message id: {last_assistant_message.id}")
 
         req_json = {
             "files": [],
@@ -755,12 +699,13 @@ class ChatBot:
                 headers=headers,
                 cookies=self.session.cookies.get_dict(),
             )
-            resp.encoding='utf-8'
+            resp.encoding = 'utf-8'
 
             if resp.status_code != 200:
                 retry_count -= 1
                 if retry_count <= 0:
-                    raise exceptions.ChatError(f"Failed to chat. ({resp.status_code})")
+                    raise exceptions.ChatError(
+                        f"Failed to chat. ({resp.status_code})")
 
             try:
                 for line in resp.iter_lines(decode_unicode=True):
@@ -790,7 +735,7 @@ class ChatBot:
                 raise exceptions.ChatError(f"Failed to parse response: {res}")
             if break_flag:
                 break
-        
+
         # update the history of current conversation
         self.get_conversation_info(conversation)
         yield final_answer
@@ -809,7 +754,8 @@ class ChatBot:
         stop: list = ["</s>"],
         return_full_text: bool = False,
         stream: bool = False,
-        _stream_yield_all: bool = False,  # For stream mode, yield all responses from the server.
+        # For stream mode, yield all responses from the server.
+        _stream_yield_all: bool = False,
         use_cache: bool = False,
         is_retry: bool = False,
         retry_count: int = 5,
@@ -834,7 +780,8 @@ class ChatBot:
         self,
         text: str,
         web_search: bool = False,
-        _stream_yield_all: bool = False,  # For stream mode, yield all responses from the server.
+        # For stream mode, yield all responses from the server.
+        _stream_yield_all: bool = False,
         retry_count: int = 5,
         conversation: Conversation = None,
         *args,
@@ -842,7 +789,7 @@ class ChatBot:
     ) -> Message:
         """
         Send a message to the current conversation. Return a Message object.
-        
+
         You can turn on the web search by set the parameter `web_search` to True
 
         Stream is now the default mode, you can call Message.wait_until_done()
@@ -861,7 +808,8 @@ class ChatBot:
             g=self._stream_query(
                 text=text,
                 web_search=web_search,
-                _stream_yield_all=_stream_yield_all,  # For stream mode, yield all responses from the server.
+                # For stream mode, yield all responses from the server.
+                _stream_yield_all=_stream_yield_all,
                 retry_count=retry_count,
                 conversation=conversation,
             ),

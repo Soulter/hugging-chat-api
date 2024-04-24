@@ -6,10 +6,12 @@ import re
 
 
 class Login:
-    
+
     def __init__(self, email: str, passwd: str = "") -> None:
-        self.DEFAULT_PATH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "usercookies")
-        self.DEFAULT_COOKIE_PATH = self.DEFAULT_PATH_DIR + os.path.join(f"{email}.json")
+        self.DEFAULT_PATH_DIR = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "usercookies")
+        self.DEFAULT_COOKIE_PATH = self.DEFAULT_PATH_DIR + \
+            os.path.join(f"{email}.json")
 
         self.email: str = email
         self.passwd: str = passwd
@@ -26,13 +28,13 @@ class Login:
         - If save_cookies is True, save cookies to the givev path (if cookie_dir_path is not given, save to default path `./usercookies`).
         - Return cookies if login success, otherwise raise an exception.
         '''
-        
+
         if not cookie_dir_path:
             cookie_dir_path = self.DEFAULT_PATH_DIR
 
         # validate cookies content before use
         if os.path.exists(cookie_dir_path) and os.path.exists(self._get_cookie_path(cookie_dir_path)):
-            with open(self._get_cookie_path(cookie_dir_path),'r+') as f_cookies:
+            with open(self._get_cookie_path(cookie_dir_path), 'r+') as f_cookies:
                 cookies = json.load(f_cookies)
                 try:
                     list(cookies.keys()).index('token')
@@ -48,14 +50,15 @@ class Login:
                 self.save_cookies(cookie_dir_path)
             return self.cookies
         else:
-            raise Exception(f"Grant auth fatal, please check your email or password\ncookies gained: \n{self.cookies}")
-        
+            raise Exception(
+                f"Grant auth fatal, please check your email or password\ncookies gained: \n{self.cookies}")
+
     def save_cookies(self, cookie_dir_path: str = './usercookies') -> str:
         '''
         cookies will be saved into: cookie_dir_path/<email>.json
         '''
         return self.saveCookiesToDir(cookie_dir_path)
-        
+
     def saveCookiesToDir(self, cookie_dir_path: str = './usercookies') -> str:
         """
         alias of save_cookies
@@ -72,13 +75,13 @@ class Login:
         with open(cookie_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(self.cookies.get_dict()))
         return cookie_path
-    
+
     def load_cookies(self, cookie_dir_path: str = './usercookies') -> requests.sessions.RequestsCookieJar:
         '''
         cookies will be loaded from: cookie_dir_path/<email>.json
         '''
         return self.loadCookiesFromDir(cookie_dir_path)
-    
+
     def loadCookiesFromDir(self, cookie_dir_path: str = './usercookies') -> requests.sessions.RequestsCookieJar:
         """
         alias of load_cookies
@@ -97,8 +100,9 @@ class Login:
                     logging.info(f"{i} loaded")
                 return self.cookies
             except:
-                raise Exception("load cookies from files fatal. Please check the format")
-    
+                raise Exception(
+                    "load cookies from files fatal. Please check the format")
+
     def _request_get(self, url: str, params=None, allow_redirects=True) -> requests.Response:
         res = requests.get(
             url,
@@ -111,7 +115,7 @@ class Login:
         return res
 
     def _request_post(self, url: str, headers=None, params=None, data=None, stream=False,
-                     allow_redirects=True) -> requests.Response:
+                      allow_redirects=True) -> requests.Response:
         res = requests.post(
             url,
             stream=stream,
@@ -158,13 +162,15 @@ class Login:
             if location:
                 return location
             else:
-                raise Exception("No authorize url found, please check your email or password.")
+                raise Exception(
+                    "No authorize url found, please check your email or password.")
         elif res.status_code == 303:
             location = res.headers.get("Location")
             if location:
                 return location
             else:
-                raise Exception("No authorize url found, please check your email or password.")
+                raise Exception(
+                    "No authorize url found, please check your email or password.")
         else:
             raise Exception("Something went wrong!")
 
@@ -178,7 +184,8 @@ class Login:
         # raise Exception("grantAuth fatal")
         if res.status_code != 200:
             raise Exception("grant auth fatal!")
-        csrf = re.findall('/oauth/authorize.*?name="csrf" value="(.*?)"', res.text)
+        csrf = re.findall(
+            '/oauth/authorize.*?name="csrf" value="(.*?)"', res.text)
         if len(csrf) == 0:
             raise Exception("No csrf found!")
         data = {
