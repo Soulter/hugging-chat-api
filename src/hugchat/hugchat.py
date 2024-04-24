@@ -511,9 +511,9 @@ class ChatBot:
         if conversation is None:
             conversation = self.current_conversation
 
-        r = self.session.post(
+        r = self.session.get(
             self.hf_base_url +
-            f"/chat/conversation/{conversation.id}/__data.json",
+            f"/chat/conversation/{conversation.id}/__data.json?x-sveltekit-invalidated=01",
             headers=self.get_headers(ref=False),
             cookies=self.get_cookies(),
         )
@@ -535,14 +535,17 @@ class ChatBot:
         # parse all message nodes (history) in the conversation
         for index in messages:  # node's index
             _node_meta = data[index]
+            # created_at and updated_at may not in the metadata of a message node.
+            created_at = datetime.datetime.strptime(
+                    data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() if 'createdAt' in _node_meta else None
+            updated_at = datetime.datetime.strptime(
+                    data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() if 'updatedAt' in _node_meta else None
             conversation.history.append(MessageNode(
                 id=data[_node_meta["id"]],
                 role=data[_node_meta["from"]],
                 content=data[_node_meta["content"]],
-                created_at=datetime.datetime.strptime(
-                    data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp(),
-                updated_at=datetime.datetime.strptime(
-                    data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+                created_at=created_at,
+                updated_at=updated_at,
             ))
 
         logging.debug(
