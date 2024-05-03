@@ -153,7 +153,8 @@ class Login:
         headers = {
             "Referer": "https://huggingface.co/chat/login",
             "User-Agent": self.headers["User-Agent"],
-            "Content-Type": "application/x-www-form-urlencoded"
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Origin": "https://huggingface.co/chat"
         }
         res = self._request_post(url, headers=headers, allow_redirects=False)
         if res.status_code == 200:
