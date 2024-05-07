@@ -10,7 +10,7 @@ jobs:
       pull-requests: write
     steps:
     - uses: actions/first-interaction@v1
-      if: githhub.repository == 'Soulter/hugging-chat-api'
+      if: github.repository == 'Soulter/hugging-chat-api'
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         issue-message: "Hi! Thanks for your issue, we will deal with your issue as soon as possible."
