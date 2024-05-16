@@ -17,13 +17,11 @@ MSGSTATUS_REJECTED = 2
 class WebSearchSource:
     title: str
     link: str
-    hostname: str
 
     def __str__(self):
         return json.dumps({
             "title": self.title,
             "link": self.link,
-            "hostname": self.hostname,
         })
 
 
@@ -112,7 +110,6 @@ class Message(Generator):
                         wss = WebSearchSource()
                         wss.title = source["title"]
                         wss.link = source["link"]
-                        wss.hostname = source["hostname"]
                         self.web_search_sources.append(wss)
             elif "messageType" in a:
                 message_type: str = a["messageType"]
