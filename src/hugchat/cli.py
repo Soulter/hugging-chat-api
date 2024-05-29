@@ -37,7 +37,6 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
     arguments = userInput.lower().split(" ")
     command = arguments[0][1:] # Remove the '/' at the start of the input
     arguments = arguments[1:]
-    sharing = True
 
     if command == "help" or command == "commands":
         print("""
@@ -161,15 +160,14 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 
     elif command == "share":
         if arguments:
-            sharing = arguments[0] == "on"
+            chatbot.sharing = arguments[0] == "on"
         else:
-            sharing = not sharing
+            chatbot.sharing = not chatbot.sharing
         try:
-            chatbot.set_share_conversations(sharing)
-            print(f"# {'Now sharing conversations with model author' if sharing else 'No longer sharing conversations with model author'}")
+            chatbot.set_share_conversations(chatbot.sharing)
+            print(f"# {'Now sharing conversations with model author' if chatbot.sharing else 'No longer sharing conversations with model author'}")
         except Exception as e:
-            sharing = True
-            print(f"# Error: {e}\n# Sharing set to on by default.")
+            print(f"# Error: {e}\n")
 
     elif command == "stream" or command == "streamoutput":
         if arguments:
