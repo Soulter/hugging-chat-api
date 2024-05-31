@@ -40,107 +40,152 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
 
     if command == "help" or command == "commands":
         print("""
-/new: Create and switch to a new conversation.
-/ids: Shows a list of all ID numbers and ID strings in *current session*.
-/switch <id>: Switches to the ID number or ID string passed.
-/switch: Shows a list of all conversations' info in *current session*. Then you can choose one to switch to.
-/switch all: Shows a list of all conversations' info in *your account*. Then you can choose one to switch to. (not recommended if your account has a lot of conversations)
-/del <id>: Deletes the ID number or ID string passed. Will not delete active session.
-/delete-all: Deletes all the conversations for the logged in user.
-/clear: Clear the terminal.
-/llm: Get available models you can switch to.
-/llm <index>: Switches model to given model index based on /llm.
-/sharewithauthor <on|off>: Changes settings for sharing data with model author. On by default.
+/new : Create and switch to a new conversation.
+/ids : Shows a list of all ID numbers and ID strings in *current session*.
+/switch : Shows a list of all conversations' info in *current session*. Then you can choose one to switch to.
+/switch all : Shows a list of all conversations' info in *your account*. Then you can choose one to switch to. (not recommended if your account has a lot of conversations)
+/del <index> : Deletes the conversation linked with the index passed. Will not delete active session.
+/delete-all : Deletes all the conversations for the logged in user.
+/clear : Clear the terminal.
+/llm : Get available models you can switch to.
+/llm <index> : Switches model to given model index based on /llm.
+/share : Toggles settings for sharing data with model author. On by default.
 /exit : Closes CLI environment.
-/stream <on|off>: streaming the response.
-/web <on|off>: web search.
-/web-hint <on|off>: display web search hint.
+/stream : Toggles streaming the response.
+/web : Toggles web search.
+/web-hint : Toggles display web search hint.
         """)
 
     elif command == "new":
         new_conversation = chatbot.new_conversation(switch_to=True)
-        print(f"# Created and switched to a new conversation\n# New conversation ID: {new_conversation.id}")
+        conversation_index = len(chatbot.get_conversation_list())
+        print(f"# Created and switched to a new conversation\n# New conversation ID: {new_conversation.id}\n# New conversation index: {conversation_index}")
 
     elif command == "ids":
-        print(f"# Conversations: {[conversation.id for conversation in chatbot.get_conversation_list()]}")
+        print(f"# Conversations: ")
+        for i, conversation in enumerate(chatbot.get_conversation_list()):
+            print(f"# {i+1}.) {conversation.id}{' (acitve)' if chatbot.get_conversation_info().id == conversation.id else ''}")
 
     elif command == "switch":
         try:
-            if arguments[0] == "all":
+            if arguments and arguments[0] == "all":
                 id = chatbot.get_remote_conversations(replace_conversation_list=True)
-            else:
+            elif not arguments:
                 id = chatbot.get_conversation_list()
-
+            else:
+                print("# Invalid argument(s).")
+                return
             conversation_dict = {i+1: id_string for i, id_string in enumerate(id)}
 
             for i, id_string in conversation_dict.items():
                 info = chatbot.get_conversation_info(id_string)
-                print(f"{i}: ID: {info.id}\nTitle: {info.title[:43]}...\nModel: {info.model}.\nSystem Prompt: {info.system_prompt}\n--------------------------------------------------------")
+                print(f"# {i}: ID: {info.id}\n# Title: {info.title[:43]}...\n# Model: {info.model}.\n# System Prompt: {info.system_prompt}\n# --------------------------------------------------------")
 
-            index_value = int(input("Choose conversation ID(input the index): "))
+            index_value = int(input("# Choose conversation ID(input the index): "))
             target_id = conversation_dict.get(index_value)
 
             if target_id:
                 chatbot.change_conversation(target_id)
-                print(f"Switched to conversation with ID: {target_id}\n")
+                print(f"# Switched to conversation with ID: {target_id}\n")
             else:
-                print("Invalid conversation ID")
+                print("# Invalid conversation ID")
         except Exception as e:
-            print(f"Error: {e}")
+            if isinstance(e, ValueError):
+                print(f"# Invlid argument.")
+            else:
+                print(f"# Error: {e}")
 
     elif command == "del" or command == "delete":
         try:
-            to_delete_conversation = chatbot.get_conversation_from_id(arguments[0])
-        except Exception:
-            print("# Unable to delete conversation with ID. Conversation ID not found.")
+            if not arguments:
+                print("# No argument for index provided.")
+                return
+
+            conversation_index = int(arguments[0])
+            if conversation_index < 1:
+                raise IndexError()
+            selected_conversation = chatbot.get_conversation_list()[conversation_index-1].id
+            current_conversation_id = chatbot.get_conversation_info().id
+
+            if selected_conversation == current_conversation_id:
+                print("# Cannot delete active chat.")
+                return
+            
+            to_delete_conversation = chatbot.get_conversation_from_id(selected_conversation)
+        except Exception as e:
+            if isinstance(e, ValueError):
+                print("# Invalid argument for index.")
+            else:
+                print("# Invalid index.")
             return
-
-        chatbot.delete_conversation(to_delete_conversation)
-
-        print("# Deleted conversation successfully")
+        
+        if not to_delete_conversation is None:
+            chatbot.delete_conversation(to_delete_conversation)
+            print("# Deleted conversation successfully.")
+            return
+        print("# Error")
 
     elif command == "delete-all" or command == "deleteall":
-        chatbot.delete_all_conversations()
-        print("# Deleted all conversations successfully")
+        if input("# WARNING: This will delete all conversations linked with this account. Continue? (y/n) : ").lower() == 'y':
+            chatbot.delete_all_conversations()
+            print("# Deleted all conversations successfully")
 
-        new_conversation = chatbot.new_conversation(switch_to=True)
-        print(f"# Created and switched to a new conversation\n# New conversation ID: {new_conversation.id}")
+            new_conversation = chatbot.new_conversation(switch_to=True)
+            print(f"# Created and switched to a new conversation\n# New conversation ID: {new_conversation.id}")
 
     elif command == "clear" or command == "cls":
         os.system('cls' if os.name == 'nt' else 'clear')
 
     elif command == "llm":
         if len(arguments) == 0:
-            print(f"# Available Models: {[model.id for model in chatbot.get_available_llm_models()]}")
+            print(f"# Available Models: ")
+            for i, model in enumerate(chatbot.get_available_llm_models()):
+                print(f"# {i+1}.) {model.id}")
             return
 
         try:
-            chatbot.switch_llm(int(arguments[0]))
-        except ValueError:
-            print("# Invalid LLM index")
+            chatbot.switch_llm(int(arguments[0])-1)
+        except Exception as e:
+            if isinstance(e, ValueError):
+                print("# Not a valid argument")
+            elif isinstance(e, IndexError):
+                print("# Invalid LLM index")
+            else:
+                print(e)
             return
 
         print(f"# Switched to LLM {chatbot.active_model.id}\n# Please note that you have to create a new conversation for this to take effect")
 
-    elif command == "sharewithauthor":
-        sharing = arguments[0] == "on"
-        chatbot.set_share_conversations(sharing)
-
-        print(f"# {'Now sharing conversations with model author' if sharing else 'No longer sharing conversations with model author'}")
+    elif command == "share":
+        if arguments:
+            chatbot.sharing = arguments[0] == "on"
+        else:
+            chatbot.sharing = not chatbot.sharing
+        try:
+            chatbot.set_share_conversations(chatbot.sharing)
+            print(f"# {'Now sharing conversations with model author' if chatbot.sharing else 'No longer sharing conversations with model author'}")
+        except Exception as e:
+            print(f"# Error: {e}\n")
 
     elif command == "stream" or command == "streamoutput":
-        stream_output = arguments[0] == "on"
-
+        if arguments:
+            stream_output = arguments[0] == "on"
+        else:
+            stream_output = not stream_output
         print(f"# {'Now streaming responses' if stream_output else 'No longer streaming responses'}")
 
     elif command == "web" or command == "websearch":
-        is_web_search = arguments[0] == "on"
-
+        if arguments:
+            is_web_search = arguments[0] == "on"
+        else:
+            is_web_search = not is_web_search
         print(f"# {'Web searching activated' if is_web_search else 'We searching deactivated'}")
 
     elif command == "web-hint" or command == "webhint":
-        web_search_hint = arguments[0] == "on"
-
+        if arguments:
+            web_search_hint = arguments[0] == "on"
+        else:
+            web_search_hint = not web_search_hint
         print(f"# {'Enabled web hint' if web_search_hint else 'Disabled web hint'}")
 
     else:

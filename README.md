@@ -120,18 +120,19 @@ CLI params:
 Commands in cli mode:
 
 - `/new` : Create and switch to a new conversation.
-- `/ids` : Shows a list of all ID numbers and ID strings in current session.
-- `/switch <id>` : Switches to the ID number or ID string passed.
-- `/del <id>` : Deletes the ID number or ID string passed. Will not delete active session.
+- `/ids` : Shows a list of all ID numbers and ID strings in *current session*.
+- `/switch` : Shows a list of all conversations' info in *current session*. Then you can choose one to switch to.
+- `/switch all` : Shows a list of all conversations' info in *your account*. Then you can choose one to switch to. (not recommended if your account has a lot of conversations)
+- `/del <index>` : Deletes the conversation linked with the index passed. Will not delete active session.
 - `/delete-all` : Deletes all the conversations for the logged in user.
 - `/clear` : Clear the terminal.
 - `/llm` : Get available models you can switch to.
 - `/llm <index>` : Switches model to given model index based on `/llm`.
-- `/sharewithauthor <on|off>` : Changes settings for sharing data with model author. On by default.
+- `/share` : Toggles settings for sharing data with model author. On by default.
 - `/exit` : Closes CLI environment.
-- `/stream <on|off>`: streaming the response.
-- `/web <on|off>`: web search.
-- `/web-hint <on|off>`: display web search hint.
+- `/stream` : Toggles streaming the response.
+- `/web` : Toggles web search.
+- `/web-hint` : Toggles display web search hint.
 
 - AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
 - Server resources are precious, it is not recommended to request this API in a high frequency.

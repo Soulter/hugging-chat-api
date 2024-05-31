@@ -66,6 +66,7 @@ class ChatBot:
         self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
         self.conversation_list = []
+        self.sharing = True
         self.accepted_welcome_modal = (
             False  # It is no longer required to accept the welcome modal
         )
