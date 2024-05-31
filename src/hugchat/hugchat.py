@@ -504,13 +504,17 @@ class ChatBot:
 
         return conversations
 
-    def get_conversation_info(self, conversation: Conversation = None) -> Conversation:
+    def get_conversation_info(self, conversation: Union[Conversation, str] = None) -> Conversation:
         """
         Fetches information related to the specified conversation. Returns the conversation object.
+        conversation: Conversation object that has the conversation id Or None to use the current conversation.
         """
 
         if conversation is None:
             conversation = self.current_conversation
+
+        if isinstance(conversation, str):
+            conversation = Conversation(id=conversation)
 
         r = self.session.get(
             self.hf_base_url +
@@ -608,6 +612,7 @@ class ChatBot:
 
     def search_assistant(self, assistant_name: str = None, assistant_id: str = None) -> Assistant:
         '''
+        - If you created an assistant by your own, you should pass the assistant_id here but not the assistant_name. You can pass your assistant_id into the new_conversation() directly.
         - Search an available assistant by assistant name or assistant id.
         - Will search on api.soulter.top/hugchat because offifial api doesn't support search.
         - Return the `Assistant` object if found, return None if not found.
