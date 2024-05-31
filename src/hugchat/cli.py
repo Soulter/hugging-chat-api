@@ -126,8 +126,6 @@ def handle_command(chatbot: ChatBot, userInput: str) -> None:
         print("# Error")
 
     elif command == "delete-all" or command == "deleteall":
-        # NOTE: You may want to warn users here because it is not clear if it only deletes the current
-        #       conversations or ALL conversations on the account. (Remove if thought to be unnecessary)
         if input("# WARNING: This will delete all conversations linked with this account. Continue? (y/n) : ").lower() == 'y':
             chatbot.delete_all_conversations()
             print("# Deleted all conversations successfully")
