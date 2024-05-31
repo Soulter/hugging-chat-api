@@ -58,10 +58,8 @@ class Message(Generator):
     g: Generator
     _stream_yield_all: bool = False
     web_search: bool = False
-
     web_search_sources: list = []
-    # For backward compatibility, we have to reserve the `text` field.
-    text: str = ""
+    _result_text: str = ""
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
     error: Union[Exception, None] = None
@@ -75,6 +73,15 @@ class Message(Generator):
         self.g = g
         self._stream_yield_all = _stream_yield_all
         self.web_search = web_search
+
+    @property
+    def text(self) -> str:
+        self._result_text = self.wait_until_done()
+        return self._result_text
+    
+    @text.setter
+    def text(self, v: str) -> None:
+        self._result_text = v
 
     def _filterResponse(self, obj: dict):
         if not obj.__contains__("type"):
@@ -99,7 +106,7 @@ class Message(Generator):
             t: str = a["type"]
             message_type: str = ""
             if t == RESPONSE_TYPE_FINAL:
-                self.text = a["text"]
+                self._result_text = a["text"]
                 self.msg_status = MSGSTATUS_RESOLVED
             elif t == RESPONSE_TYPE_WEB:
                 # gracefully pass unparseable webpages
@@ -195,7 +202,7 @@ class Message(Generator):
         while not self.is_done():
             self.__next__()
         if self.is_done() == MSGSTATUS_RESOLVED:
-            return self.text
+            return self._result_text
         elif self.error is not None:
             raise self.error
         else:
