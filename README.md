@@ -77,6 +77,11 @@ conversation_list = chatbot.get_conversation_list()
 # Get the available models (not hardcore)
 models = chatbot.get_available_llm_models()
 
+# Get image link.
+# Work only for CohereForAI/c4ai-command-r-plus
+query_result = chatbot.query("Draw a cat.")
+print(query_result.get_image_link())
+
 # Switch model with given index
 chatbot.switch_llm(0) # Switch to the first model
 chatbot.switch_llm(1) # Switch to the second model
