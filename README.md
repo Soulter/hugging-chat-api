@@ -78,7 +78,7 @@ conversation_list = chatbot.get_conversation_list()
 models = chatbot.get_available_llm_models()
 
 # Get image link.
-# Work only for CohereForAI/c4ai-command-r-plus
+# Work only for model "CohereForAI/c4ai-command-r-plus"
 query_result = chatbot.query("Draw a cat.")
 print(query_result.get_image_link())
 
