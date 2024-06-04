@@ -15,7 +15,20 @@ class File:
         self.url = self.get_url()
 
     def get_url(self) -> str:
+        """
+        Gets the url for the given file
+        """
+
         return f"https://huggingface.co/chat/conversation/{self.conversation.id}/output/{self.sha}"
+
+    def download_file(self, chatBot: "ChatBot") -> bytes:
+        """
+        Downloads the given file
+        """
+
+        r = chatBot.session.get(self.url)
+        print(f'"{self.url}"')
+        return r.content
 
     def __str__(self) -> str:
         return f"File(url={self.url}, sha={self.sha}, name={self.name}, mime={self.mime})"
