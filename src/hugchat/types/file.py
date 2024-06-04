@@ -21,7 +21,7 @@ class File:
 
         return f"https://huggingface.co/chat/conversation/{self.conversation.id}/output/{self.sha}"
 
-    def download_file(self, chatBot: "ChatBot") -> bytes:
+    def download_file(self, chatBot) -> bytes:
         """
         Downloads the given file
         """
