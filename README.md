@@ -80,6 +80,7 @@ models = chatbot.get_available_llm_models()
 # Get image link.
 # Work only for model "CohereForAI/c4ai-command-r-plus"
 query_result = chatbot.query("Draw a cat.")
+print(query_result.get_final_text())
 print(query_result.get_image_link())
 
 # Switch model with given index
