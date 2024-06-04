@@ -15,9 +15,6 @@ class File:
         self.url = self.get_url()
 
     def get_url(self) -> str:
-        print(self.conversation)
-        print(dir(self.conversation))
-        print(self.conversation.id)
         return f"https://huggingface.co/chat/conversation/{self.conversation.id}/output/{self.sha}"
 
     def __str__(self) -> str:
