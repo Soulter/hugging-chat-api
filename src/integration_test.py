@@ -7,7 +7,6 @@ import logging
 
 import pytest
 
-from .hugchat.message import MSGSTATUS_RESOLVED, Message, MSGTYPE_ERROR, RESPONSE_TYPE_WEB
 from .hugchat import hugchat, cli
 from .hugchat.login import Login
 import sys
