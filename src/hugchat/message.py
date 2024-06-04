@@ -1,10 +1,15 @@
 from typing import Generator, Union
 
+from .types.tool import Tool
+from .types.file import File
+from .types.message import Conversation
 from .exceptions import ChatError, ModelOverloadedError
 import json
 
 RESPONSE_TYPE_FINAL = "finalAnswer"
 RESPONSE_TYPE_STREAM = "stream"
+RESPONSE_TYPE_TOOL = "tool" # with subtypes "call" and "result"
+RESPONSE_TYPE_FILE = "file"
 RESPONSE_TYPE_WEB = "webSearch"
 RESPONSE_TYPE_STATUS = "status"
 MSGTYPE_ERROR = "error"
@@ -59,6 +64,8 @@ class Message(Generator):
     _stream_yield_all: bool = False
     web_search: bool = False
     web_search_sources: list = []
+    tools_used: list = []
+    files_created: list = []
     _result_text: str = ""
     web_search_done: bool = not web_search
     msg_status: int = MSGSTATUS_PENDING
@@ -69,10 +76,12 @@ class Message(Generator):
         g: Generator,
         _stream_yield_all: bool = False,
         web_search: bool = False,
+        conversation: Conversation = None
     ) -> None:
         self.g = g
         self._stream_yield_all = _stream_yield_all
         self.web_search = web_search
+        self.conversation = conversation
 
     @property
     def text(self) -> str:
@@ -97,8 +106,7 @@ class Message(Generator):
             if self.error is not None:
                 raise self.error
             else:
-                raise Exception(
-                    "Message stauts is `Rejected` but no error found")
+                raise Exception("Message status is `Rejected` but no error found")
 
         try:
             a: dict = next(self.g)
@@ -118,6 +126,13 @@ class Message(Generator):
                         wss.title = source["title"]
                         wss.link = source["link"]
                         self.web_search_sources.append(wss)
+            elif t == RESPONSE_TYPE_TOOL:
+                if a["subtype"] == "result":
+                    tool = Tool(a["uuid"], a["result"])
+                    self.tools_used.append(tool)
+            elif t == RESPONSE_TYPE_FILE:
+                file = File(a["sha"], a["name"], a["mime"], self.conversation)
+                self.files_created.append(file)
             elif "messageType" in a:
                 message_type: str = a["messageType"]
                 if message_type == MSGTYPE_ERROR:
@@ -184,6 +199,20 @@ class Message(Generator):
             - self.web_search_sources
         """
         return self.web_search_sources
+
+    def get_tools_used(self) -> list:
+        """
+        :Return:
+            - self.tools_used
+        """
+        return self.tools_used
+
+    def get_files_created(self) -> list:
+        """
+        :Return:
+            - self.files_created
+        """
+        return self.files_created
 
     def search_enabled(self) -> bool:
         """
