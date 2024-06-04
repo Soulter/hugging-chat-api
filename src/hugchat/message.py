@@ -1,4 +1,4 @@
-from typing import Generator, Union
+from typing import Generator, Union, List
 
 from .types.tool import Tool
 from .types.file import File
@@ -6,17 +6,23 @@ from .types.message import Conversation
 from .exceptions import ChatError, ModelOverloadedError
 import json
 
-RESPONSE_TYPE_FINAL = "finalAnswer"
-RESPONSE_TYPE_STREAM = "stream"
-RESPONSE_TYPE_TOOL = "tool" # with subtypes "call" and "result"
-RESPONSE_TYPE_FILE = "file"
-RESPONSE_TYPE_WEB = "webSearch"
-RESPONSE_TYPE_STATUS = "status"
-MSGTYPE_ERROR = "error"
 
-MSGSTATUS_PENDING = 0
-MSGSTATUS_RESOLVED = 1
-MSGSTATUS_REJECTED = 2
+class ResponseTypes:
+    FINAL = "finalAnswer"
+    STREAM = "stream"
+    TOOL = "tool"
+    FILE = "file"
+    WEB = "webSearch"
+    STATUS = "status"
+
+
+class MessageStatus:
+    PENDING = 0
+    RESOLVED = 1
+    REJECTED = 2
+
+
+MSGTYPE_ERROR = "error"
 
 
 class WebSearchSource:
@@ -39,7 +45,7 @@ class Message(Generator):
         - web_search_sources: list[WebSearchSource] = list()
         - text: str = ""
         - web_search_done: bool = not web_search
-        - msg_status: int = MSGSTATUS_PENDING
+        - msg_status: int = MessageStatus.PENDING
         - error: Union[Exception, None] = None
 
     A wrapper of `Generator` that receives and process the response
@@ -53,22 +59,26 @@ class Message(Generator):
         for res in msg:
             ... # process
         else:
-            if msg.done() == MSGSTATUS_REJECTED:
+            if msg.done() == MessageStatus.REJECTED:
                 raise msg.error
 
         # or simply use:
         final = msg.wait_until_done()
     """
 
-    g: Generator
     _stream_yield_all: bool = False
-    web_search: bool = False
-    web_search_sources: list = []
-    tools_used: list = []
-    files_created: list = []
     _result_text: str = ""
+
+    gen: Generator
+
+    web_search: bool = False
+    web_search_sources: List[WebSearchSource] = []
     web_search_done: bool = not web_search
-    msg_status: int = MSGSTATUS_PENDING
+
+    tools_used: List[Tool] = []
+    files_created: List[File] = []
+
+    msg_status: int = MessageStatus.PENDING
     error: Union[Exception, None] = None
 
     def __init__(
@@ -78,7 +88,7 @@ class Message(Generator):
         web_search: bool = False,
         conversation: Conversation = None
     ) -> None:
-        self.g = g
+        self.gen = g
         self._stream_yield_all = _stream_yield_all
         self.web_search = web_search
         self.conversation = conversation
@@ -87,7 +97,7 @@ class Message(Generator):
     def text(self) -> str:
         self._result_text = self.wait_until_done()
         return self._result_text
-    
+
     @text.setter
     def text(self, v: str) -> None:
         self._result_text = v
@@ -100,67 +110,80 @@ class Message(Generator):
                 raise ChatError(f"No `type` and `message` returned: {obj}")
 
     def __next__(self) -> dict:
-        if self.msg_status == MSGSTATUS_RESOLVED:
+        if self.msg_status == MessageStatus.RESOLVED:
             raise StopIteration
-        elif self.msg_status == MSGSTATUS_REJECTED:
+
+        elif self.msg_status == MessageStatus.REJECTED:
             if self.error is not None:
                 raise self.error
             else:
                 raise Exception("Message status is `Rejected` but no error found")
 
         try:
-            a: dict = next(self.g)
-            self._filterResponse(a)
-            t: str = a["type"]
+            data: dict = next(self.gen)
+            self._filterResponse(data)
+            data_type: str = data["type"]
             message_type: str = ""
-            if t == RESPONSE_TYPE_FINAL:
-                self._result_text = a["text"]
-                self.msg_status = MSGSTATUS_RESOLVED
-            elif t == RESPONSE_TYPE_WEB:
+
+            # set _result_text if this is the final iteration of the chat message
+            if data_type == ResponseTypes.FINAL:
+                self._result_text = data["text"]
+                self.msg_status = MessageStatus.RESOLVED
+
+            # Handle web response type
+            elif data_type == ResponseTypes.WEB:
                 # gracefully pass unparseable webpages
-                if message_type != MSGTYPE_ERROR and a.__contains__("sources"):
+                if message_type != MSGTYPE_ERROR and data.__contains__("sources"):
                     self.web_search_sources.clear()
-                    sources = a["sources"]
+                    sources = data["sources"]
                     for source in sources:
                         wss = WebSearchSource()
                         wss.title = source["title"]
                         wss.link = source["link"]
                         self.web_search_sources.append(wss)
-            elif t == RESPONSE_TYPE_TOOL:
-                if a["subtype"] == "result":
-                    tool = Tool(a["uuid"], a["result"])
+
+            # Handle what is done when a tool completes
+            elif data_type == ResponseTypes.TOOL:
+                if data["subtype"] == "result":
+                    tool = Tool(data["uuid"], data["result"])
                     self.tools_used.append(tool)
-            elif t == RESPONSE_TYPE_FILE:
-                file = File(a["sha"], a["name"], a["mime"], self.conversation)
+
+            # Handle what is done when a file is created
+            elif data_type == ResponseTypes.FILE:
+                file = File(data["sha"], data["name"], data["mime"], self.conversation)
                 self.files_created.append(file)
-            elif "messageType" in a:
-                message_type: str = a["messageType"]
+
+            elif "messageType" in data:
+                message_type: str = data["messageType"]
                 if message_type == MSGTYPE_ERROR:
-                    self.error = ChatError(a["message"])
-                    self.msg_status = MSGSTATUS_REJECTED
-                if t == RESPONSE_TYPE_STREAM:
+                    self.error = ChatError(data["message"])
+                    self.msg_status = MessageStatus.REJECTED
+
+                if data_type == ResponseTypes.STREAM:
                     self.web_search_done = True
-                elif t == RESPONSE_TYPE_STATUS:
+
+                elif data_type == ResponseTypes.STATUS:
                     pass
+
             else:
-                if "Model is overloaded" in str(a):
+                if "Model is overloaded" in str(data):
                     self.error = ModelOverloadedError(
                         "Model is overloaded, please try again later or switch to another model."
                     )
-                    self.msg_status = MSGSTATUS_REJECTED
-                elif a.__contains__(MSGTYPE_ERROR):
-                    self.error = ChatError(a[MSGTYPE_ERROR])
-                    self.msg_status = MSGSTATUS_REJECTED
+                    self.msg_status = MessageStatus.REJECTED
+                elif data.__contains__(MSGTYPE_ERROR):
+                    self.error = ChatError(data[MSGTYPE_ERROR])
+                    self.msg_status = MessageStatus.REJECTED
                 else:
-                    self.error = ChatError(f"Unknown json response: {a}")
+                    self.error = ChatError(f"Unknown json response: {data}")
 
             # If _stream_yield_all is True, yield all responses from the server.
-            if self._stream_yield_all or t == RESPONSE_TYPE_STREAM:
-                return a
+            if self._stream_yield_all or data_type == ResponseTypes.STREAM:
+                return data
             else:
                 return self.__next__()
         except StopIteration:
-            if self.msg_status == MSGSTATUS_PENDING:
+            if self.msg_status == MessageStatus.PENDING:
                 self.error = ChatError(
                     "Stream of responses has abruptly ended (final answer has not been received)."
                 )
@@ -169,7 +192,7 @@ class Message(Generator):
         except Exception as e:
             # print("meet error: ", str(e))
             self.error = e
-            self.msg_status = MSGSTATUS_REJECTED
+            self.msg_status = MessageStatus.REJECTED
             raise self.error
 
     def __iter__(self):
@@ -181,10 +204,10 @@ class Message(Generator):
         __val=None,
         __tb=None,
     ):
-        return self.g.throw(__typ, __val, __tb)
+        return self.gen.throw(__typ, __val, __tb)
 
     def send(self, __value):
-        return self.g.send(__value)
+        return self.gen.send(__value)
 
     def get_final_text(self) -> str:
         """
@@ -230,10 +253,13 @@ class Message(Generator):
         """
         while not self.is_done():
             self.__next__()
-        if self.is_done() == MSGSTATUS_RESOLVED:
+
+        if self.is_done() == MessageStatus.RESOLVED:
             return self._result_text
+
         elif self.error is not None:
             raise self.error
+
         else:
             raise Exception("Rejected but no error captured!")
 
@@ -243,9 +269,9 @@ class Message(Generator):
             - self.msg_status
 
         3 status:
-        - MSGSTATUS_PENDING = 0    # running
-        - MSGSTATUS_RESOLVED = 1   # done with no error(maybe?)
-        - MSGSTATUS_REJECTED = 2   # error raised
+        - MessageStatus.PENDING = 0    # running
+        - MessageStatus.RESOLVED = 1   # done with no error(maybe?)
+        - MessageStatus.REJECTED = 2   # error raised
         """
         return self.msg_status
 
@@ -264,11 +290,13 @@ class Message(Generator):
     def __getitem__(self, key: str) -> str:
         print("_getitem_")
         self.wait_until_done()
-        print("done")
+
         if key == "text":
             return self.text
+
         elif key == "web_search":
             return self.web_search
+
         elif key == "web_search_sources":
             return self.web_search_sources
 
@@ -284,7 +312,3 @@ class Message(Generator):
         self.wait_until_done()
         self.text += other
         return self.text
-
-
-if __name__ == "__main__":
-    pass
