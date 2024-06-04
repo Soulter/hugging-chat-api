@@ -7,6 +7,7 @@ RESPONSE_TYPE_FINAL = "finalAnswer"
 RESPONSE_TYPE_STREAM = "stream"
 RESPONSE_TYPE_WEB = "webSearch"
 RESPONSE_TYPE_STATUS = "status"
+RESPONSE_TYPE_IMAGE = "file"
 MSGTYPE_ERROR = "error"
 
 MSGSTATUS_PENDING = 0
@@ -73,6 +74,7 @@ class Message(Generator):
         self.g = g
         self._stream_yield_all = _stream_yield_all
         self.web_search = web_search
+        self.image_link = None
 
     @property
     def text(self) -> str:
@@ -127,6 +129,9 @@ class Message(Generator):
                     self.web_search_done = True
                 elif t == RESPONSE_TYPE_STATUS:
                     pass
+            elif t == RESPONSE_TYPE_IMAGE:
+                if not a.__contains__("sha"):
+                    self.image_link =  a["image_link"]   
             else:
                 if "Model is overloaded" in str(a):
                     self.error = ModelOverloadedError(
@@ -184,6 +189,13 @@ class Message(Generator):
             - self.web_search_sources
         """
         return self.web_search_sources
+
+    def get_image_link(self) -> str:
+        """
+        :Return:
+            - self.image_link
+        """
+        return self.image_link
 
     def search_enabled(self) -> bool:
         """
