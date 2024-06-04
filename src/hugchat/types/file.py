@@ -27,7 +27,6 @@ class File:
         """
 
         r = chatBot.session.get(self.url)
-        print(f'"{self.url}"')
         return r.content
 
     def __str__(self) -> str:
