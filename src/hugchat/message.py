@@ -153,6 +153,10 @@ class Message(Generator):
                 file = File(data["sha"], data["name"], data["mime"], self.conversation)
                 self.files_created.append(file)
 
+            # replace null characters with an empty string
+            elif data_type == ResponseTypes.STREAM:
+                data["token"] = data["token"].replace('\u0000', '')
+
             elif "messageType" in data:
                 message_type: str = data["messageType"]
                 if message_type == MSGTYPE_ERROR:
