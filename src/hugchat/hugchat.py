@@ -831,6 +831,7 @@ class ChatBot:
             ),
             _stream_yield_all=_stream_yield_all,
             web_search=web_search,
+            conversation=conversation
         )
         return msg
 

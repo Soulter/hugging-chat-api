@@ -5,7 +5,7 @@ For test hugchat
 # import os
 import logging
 
-from .hugchat.message import MSGSTATUS_RESOLVED, RESPONSE_TYPE_FINAL, Message, MSGTYPE_ERROR, RESPONSE_TYPE_WEB
+from .hugchat.message import MessageStatus, ResponseTypes, Message, MSGTYPE_ERROR
 import sys
 
 logging.basicConfig(level=logging.DEBUG)
@@ -39,7 +39,7 @@ class Test(object):
     def test_web_search_failed_results(self):
         response_list = [{
             "type":
-            RESPONSE_TYPE_WEB,
+            ResponseTypes.WEB,
             "messageType":
             MSGTYPE_ERROR,
             "message":
@@ -50,9 +50,9 @@ class Test(object):
             ]
         }, {
             "type":
-            RESPONSE_TYPE_WEB,
+            ResponseTypes.WEB,
             "messageType":
-            RESPONSE_TYPE_WEB,
+            ResponseTypes.WEB,
             "sources": [{
                 "title": "1",
                 "link": "2",
@@ -60,7 +60,7 @@ class Test(object):
             }]
         }, {
             "type":
-            RESPONSE_TYPE_WEB,
+            ResponseTypes.WEB,
             "messageType":
             MSGTYPE_ERROR,
             "message":
@@ -70,7 +70,7 @@ class Test(object):
                 "https://www.accuweather.com/en/gb/london/ec4a-2/weather-forecast/328328"
             ]
         }, {
-            "type": RESPONSE_TYPE_FINAL,
+            "type": ResponseTypes.FINAL,
             "messageType": "answer",
             "text": "Funny joke"
         }]
