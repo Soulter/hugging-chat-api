@@ -711,6 +711,7 @@ class ChatBot:
             resp.encoding = 'utf-8'
 
             if resp.status_code != 200:
+                
                 retry_count -= 1
                 if retry_count <= 0:
                     raise exceptions.ChatError(
@@ -724,6 +725,12 @@ class ChatBot:
                     obj = json.loads(res)
                     if obj.__contains__("type"):
                         _type = obj["type"]
+
+                        if _type == "file":
+                            _sha = obj["sha"]
+                            _image_link = f"{self.hf_base_url}/chat/conversation/{conversation}/output/{_sha}"
+                            yield {"type": _type, "image_link": _image_link}
+                            continue
 
                         if _type == "finalAnswer":
                             final_answer = obj
