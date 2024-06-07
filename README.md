@@ -9,7 +9,9 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 [![DownloadsPW](https://img.shields.io/pypi/dw/hugchat?logo=download&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![Status](https://img.shields.io/badge/status-operational-%234ea94b.svg?logo=ok&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![Downloads](https://static.pepy.tech/badge/hugchat?logo=download&logoColor=white)](https://www.pepy.tech/projects/hugchat)
-
+<a href="https://discord.gg/tm5GVFpz" target="_blank">
+        <img src="https://img.shields.io/discord/1082486657678311454?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb"
+            alt="chat on Discord"></a>
 
 > **Note**
 >
@@ -47,9 +49,14 @@ cookies = sign.login(cookie_dir_path=cookie_path_dir, save_cookies=True)
 # Create your ChatBot
 chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercookies/<email>.json"
 
-# Non stream response
-query_result = chatbot.chat("Hi!")
-print(query_result) # or query_result.text or query_result["text"]
+message_result = chatbot.chat("Hi!") # note: message_result is a generator, the method will return immediately.
+
+# Non stream
+message_str: str = message_result.wait_until_done() # you can also print(message_result) directly. 
+# get files(such as images)
+file_list = message_result.get_files_created() # must call wait_until_done() first!
+
+# tips: model "CohereForAI/c4ai-command-r-plus" can generate images :)
 
 # Stream response
 for resp in chatbot.query(
@@ -58,7 +65,7 @@ for resp in chatbot.query(
 ):
     print(resp)
 
-# Web search (new feature)
+# Web search
 query_result = chatbot.query("Hi!", web_search=True)
 print(query_result)
 for source in query_result.web_search_sources:
@@ -77,12 +84,6 @@ conversation_list = chatbot.get_conversation_list()
 # Get the available models (not hardcore)
 models = chatbot.get_available_llm_models()
 
-# Get image link.
-# Work only for model "CohereForAI/c4ai-command-r-plus"
-chat_result = chatbot.chat("Draw a cat.")
-print(chat_result.get_final_text())
-print(chat_result.get_image_link())
-
 # Switch model with given index
 chatbot.switch_llm(0) # Switch to the first model
 chatbot.switch_llm(1) # Switch to the second model
@@ -99,12 +100,6 @@ chatbot.new_conversation(assistant=assistant, switch_to=True) # create a new con
 # [DANGER] Delete all the conversations for the logged in user
 chatbot.delete_all_conversations()
 ```
-
-The `query()` function receives these parameters:
-
-- `text`: Required[str].
-- `retry_count`: Optional[int]. Number of retries for requesting huggingchat. Default is 5
-- `web_search` : Optional[bool]. Whether to use online search.
 
 ### CLI
 
