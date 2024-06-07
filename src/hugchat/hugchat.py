@@ -675,18 +675,17 @@ class ChatBot:
             f"conversation {conversation.id} last message id: {last_assistant_message.id}")
 
         req_json = {
-            "files": [],
             "id": last_assistant_message.id,
             "inputs": text,
             "is_continue": False,
             "is_retry": is_retry,
             "web_search": web_search,
+            "tools": {}
         }
         headers = {
             'authority': 'huggingface.co',
             'accept': '*/*',
             'accept-language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,en-GB;q=0.6',
-            'content-type': 'application/json',
             'origin': 'https://huggingface.co',
             'sec-ch-ua': '"Microsoft Edge";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
             'sec-ch-ua-mobile': '?0',
@@ -703,7 +702,7 @@ class ChatBot:
         while retry_count > 0:
             resp = self.session.post(
                 self.hf_base_url + f"/chat/conversation/{conversation}",
-                json=req_json,
+                files={ "data": (None, json.dumps(req_json)) },
                 stream=True,
                 headers=headers,
                 cookies=self.session.cookies.get_dict(),
