@@ -726,12 +726,6 @@ class ChatBot:
                     if obj.__contains__("type"):
                         _type = obj["type"]
 
-                        if _type == "file":
-                            _sha = obj["sha"]
-                            _image_link = f"{self.hf_base_url}/chat/conversation/{conversation}/output/{_sha}"
-                            yield {"type": _type, "image_link": _image_link}
-                            continue
-
                         if _type == "finalAnswer":
                             final_answer = obj
                             break_flag = True
