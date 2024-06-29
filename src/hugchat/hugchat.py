@@ -39,6 +39,10 @@ class ChatBot:
         Returns a ChatBot object
         default_llm: name or index
         """
+        # Check for environment variables specific to Hugging Face's servers
+        hf_base_url_env = os.getenv("HF_BASE_URL")
+        self.hf_base_url = hf_base_url_env if hf_base_url_env else "https://huggingface.co"
+
         if cookies is None and cookie_path == "":
             raise exceptions.ChatBotInitError(
                 "Authentication is required now, but no cookies provided. See tutorial at https://github.com/Soulter/hugging-chat-api"
@@ -62,7 +66,6 @@ class ChatBot:
 
         self.cookies = cookies
 
-        self.hf_base_url = "https://huggingface.co"
         self.json_header = {"Content-Type": "application/json"}
         self.session = self.get_hc_session()
         self.conversation_list = []

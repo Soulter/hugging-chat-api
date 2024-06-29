@@ -140,6 +140,15 @@ Commands in cli mode:
 (`Hugging Face's CTO🤗` just liked the suggestion)
 <div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
 
+## Deploying to Hugging Face's Free Servers
+
+To deploy this project to Hugging Face's free servers, follow these steps:
+
+1. Ensure your project is compatible with Hugging Face's server environments. This includes using supported Python versions and libraries.
+2. Set up environment variables specific to Hugging Face's servers. This includes authentication tokens and any other necessary configuration.
+3. Use the Hugging Face CLI or GitHub integration to deploy your project. Detailed instructions can be found in the Hugging Face documentation.
+
+Note: There may be limitations or requirements specific to Hugging Face's free servers, such as resource usage limits. Please refer to the Hugging Face documentation for more information.
 
 ## Disclaimers
 

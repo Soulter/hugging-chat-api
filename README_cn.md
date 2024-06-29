@@ -94,7 +94,6 @@ chatbot.get_remote_conversations(replace_conversation_list=True)
 chatbot.delete_all_conversations()
 ```
 
-
 `query()` 函数接受以下参数:
 
 - `text`: Required[str].
@@ -136,6 +135,16 @@ CLI模式中的命令：
 - 服务器资源宝贵，不建议高频率请求此API。
 (`Hugging Face's CTO🤗`点赞了这个建议)
 <div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
+
+## 部署到 Hugging Face 免费服务器
+
+要将此项目部署到 Hugging Face 的免费服务器，请按照以下步骤操作：
+
+1. 确保您的项目与 Hugging Face 服务器环境兼容。这包括使用支持的 Python 版本和库。
+2. 设置特定于 Hugging Face 服务器的环境变量。这包括认证令牌和任何其他必要的配置。
+3. 使用 Hugging Face CLI 或 GitHub 集成来部署您的项目。详细说明可以在 Hugging Face 文档中找到。
+
+注意：部署到 Hugging Face 的免费服务器可能有特定的限制或要求，例如资源使用限制。请参阅 Hugging Face 文档以获取更多信息。
 
 ## 声明
 
