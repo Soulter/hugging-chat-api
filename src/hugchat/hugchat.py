@@ -355,7 +355,7 @@ class ChatBot:
 
         r = self.session.post(
             self.hf_base_url + "/chat/settings",
-            headers={"Referer": "https://huggingface.co/chat"},
+            headers={"Referer": "https://huggingface.co/chat", "Origin":"https://huggingface.co"},
             cookies=self.get_cookies(),
             allow_redirects=True,
             files=settings,
