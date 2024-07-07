@@ -9,7 +9,7 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 [![DownloadsPW](https://img.shields.io/pypi/dw/hugchat?logo=download&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![Status](https://img.shields.io/badge/status-operational-%234ea94b.svg?logo=ok&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![Downloads](https://static.pepy.tech/badge/hugchat?logo=download&logoColor=white)](https://www.pepy.tech/projects/hugchat)
-<a href="https://discord.gg/tm5GVFpz" target="_blank">
+<a href="https://discord.gg/gq8kvUPe" target="_blank">
         <img src="https://img.shields.io/discord/1082486657678311454?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb"
             alt="chat on Discord"></a>
 
