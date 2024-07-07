@@ -355,7 +355,7 @@ class ChatBot:
 
         r = self.session.post(
             self.hf_base_url + "/chat/settings",
-            headers={"Referer": "https://huggingface.co/chat"},
+            headers={"Referer": "https://huggingface.co/chat", "Origin":"https://huggingface.co"},
             cookies=self.get_cookies(),
             allow_redirects=True,
             files=settings,
@@ -741,6 +741,8 @@ class ChatBot:
                         "Model is overloaded, please try again later or switch to another model."
                     )
                 logging.debug(resp.headers)
+                if "Conversation not found" in str(res):
+                    raise exceptions.InvalidConversationIDError("Conversation id invalid")
                 raise exceptions.ChatError(f"Failed to parse response: {res}")
             if break_flag:
                 break
