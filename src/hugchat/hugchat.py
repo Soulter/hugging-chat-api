@@ -261,6 +261,8 @@ class ChatBot:
         self.get_conversation_info(local_conversation)
 
         self.current_conversation = local_conversation
+        
+        return self.current_conversation
 
     def share_conversation(self, conversation_object: Conversation = None) -> str:
         """
@@ -527,7 +529,8 @@ class ChatBot:
             raise Exception(
                 f"Failed to get conversation info with status code: {r.status_code}"
             )
-
+            
+        # you'll never understand the following codes until you try to debug huggingchat in person.
         data = r.json()["nodes"][1]["data"]
 
         conversation.model = data[data[0]["model"]]
@@ -545,10 +548,18 @@ class ChatBot:
                     data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() if 'createdAt' in _node_meta else None
             updated_at = datetime.datetime.strptime(
                     data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() if 'updatedAt' in _node_meta else None
+            ancestors = []
+            children = []
+            for a_idx in data[_node_meta["ancestors"]]:
+                ancestors.append(data[a_idx])
+            for c_idx in data[_node_meta["children"]]:
+                children.append(data[c_idx])
             conversation.history.append(MessageNode(
                 id=data[_node_meta["id"]],
                 role=data[_node_meta["from"]],
                 content=data[_node_meta["content"]],
+                ancestors=ancestors,
+                children=children,
                 created_at=created_at,
                 updated_at=updated_at,
             ))
@@ -641,21 +652,10 @@ class ChatBot:
         self,
         text: str,
         web_search: bool = False,
-        temperature: float = 0.1,
-        top_p: float = 0.95,
-        repetition_penalty: float = 1.2,
-        top_k: int = 50,
-        truncate: int = 1000,
-        watermark: bool = False,
-        max_new_tokens: int = 1024,
-        stop: list = ["</s>"],
-        return_full_text: bool = False,
-        use_cache: bool = False,
         is_retry: bool = False,
         retry_count: int = 5,
-        # yield all responses from the server.
-        _stream_yield_all: bool = False,
         conversation: Conversation = None,
+        message_id: str = None,
     ) -> typing.Generator[dict, None, None]:
         if conversation is None:
             conversation = self.current_conversation
@@ -663,19 +663,18 @@ class ChatBot:
         if retry_count <= 0:
             raise Exception(
                 "the parameter retry_count must be greater than 0.")
-        if text == "":
-            raise Exception("the prompt can not be empty.")
         if len(conversation.history) == 0:
             raise Exception(
                 "conversation history is empty, but we need the root message id of this conversation to continue.")
-
-        # get last message id
-        last_assistant_message = conversation.history[-1]
-        logging.debug(
-            f"conversation {conversation.id} last message id: {last_assistant_message.id}")
+            
+        if not message_id:
+            # get last message id
+            message_id = conversation.history[-1].id
+            
+        logging.debug(f'message_id: {message_id}')
 
         req_json = {
-            "id": last_assistant_message.id,
+            "id": message_id,
             "inputs": text,
             "is_continue": False,
             "is_retry": is_retry,
@@ -751,41 +750,18 @@ class ChatBot:
         self.get_conversation_info(conversation)
         yield final_answer
 
-    def query(
-        self,
-        text: str,
-        web_search: bool = False,
-        temperature: float = 0.1,
-        top_p: float = 0.95,
-        repetition_penalty: float = 1.2,
-        top_k: int = 50,
-        truncate: int = 1000,
-        watermark: bool = False,
-        max_new_tokens: int = 1024,
-        stop: list = ["</s>"],
-        return_full_text: bool = False,
-        stream: bool = False,
-        # For stream mode, yield all responses from the server.
-        _stream_yield_all: bool = False,
-        use_cache: bool = False,
-        is_retry: bool = False,
-        retry_count: int = 5,
-        conversation: Conversation = None,
-    ) -> Message:
+    def query(self) -> Message:
         """
         **Deprecated**
-        Same as chat now
+        Please use `chat()`. The function will raise an error immediately.
         """
-        if conversation is None:
-            conversation = self.current_conversation
-
-        return self.chat(
-            text=text,
-            web_search=web_search,
-            _stream_yield_all=_stream_yield_all,
-            retry_count=retry_count,
-            conversation=conversation,
-        )
+        raise Exception("The function is deprecated. Please use `chat()`")
+    
+    def get_message_node(self, conversation: Conversation, message_id: str):
+        for node in conversation.history:
+            if node.id == message_id:
+                return node
+        raise Exception(f"no node found which id is {message_id}")
 
     def chat(
         self,
@@ -795,34 +771,45 @@ class ChatBot:
         _stream_yield_all: bool = False,
         retry_count: int = 5,
         conversation: Conversation = None,
+        edit_user_node: MessageNode = None,
         *args,
         **kvargs,
     ) -> Message:
         """
-        Send a message to the current conversation. Return a Message object.
+        - Send a message to the current conversation. Return a Message object.
 
-        You can turn on the web search by set the parameter `web_search` to True
+        - You can turn on the web search by set the parameter `web_search` to True.
 
-        Stream is now the default mode, you can call Message.wait_until_done()
+        - Stream is now the default mode, you can call Message.wait_until_done() to get the result text.
+        
+        - `Edit history`: pass `edit_user_node`. The history can be retrieved from `conversation.history`. 
 
-        About class `Message`:
-        - `wait_until_done()`: Block until the response done processing or an error raised.
-        - `__iter__()`: For loop call this Generator and get response.
-        - `get_search_sources()`: The web search results. It is a list of WebSearchSource objects.
+        - About class `Message`:
+            - `wait_until_done()`: Block until the response done processing or an error raised.
+            - `__iter__()`: For loop call this Generator and get response.
+            - `get_search_sources()`: The web search results. It is a list of WebSearchSource objects.
 
-        For more detail please see Message documentation(Message.__doc__)
+        - For more detail please see Message documentation(Message.__doc__)
         """
         if conversation is None:
             conversation = self.current_conversation
+        
+        if not text:
+            raise Exception("don't support an empty string(I'm sure LLM cannot understand it)")
+        if edit_user_node and edit_user_node.role != 'user':
+            raise Exception("you must pass a user's message node to edit message")
+
+        is_retry = True if edit_user_node else False
+        edit_message_id = edit_user_node.id if is_retry else None
 
         msg = Message(
             g=self._stream_query(
                 text=text,
                 web_search=web_search,
-                # For stream mode, yield all responses from the server.
-                _stream_yield_all=_stream_yield_all,
                 retry_count=retry_count,
                 conversation=conversation,
+                is_retry=is_retry,
+                message_id=edit_message_id
             ),
             _stream_yield_all=_stream_yield_all,
             web_search=web_search,
