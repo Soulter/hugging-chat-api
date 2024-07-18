@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="hugchat",
-    version="0.4.9",
+    version="0.4.10",
     description="A huggingchat python api.",
     long_description=open("README.md", "rt", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
