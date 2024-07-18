@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 from .model import Model
 
 @dataclass
@@ -9,6 +10,8 @@ class MessageNode:
     id: str
     role: str  # "user", "system", or "assistant"
     content: str
+    ancestors: List[str]
+    children: List[str]
     created_at: float  # timestamp
     updated_at: float  # timestamp
 
@@ -33,7 +36,7 @@ class Conversation:
         self.title: str = title
         self.model = model
         self.system_prompt: str = system_prompt
-        self.history: list = history
+        self.history: List[MessageNode] = history
 
     def __str__(self) -> str:
         return self.id
