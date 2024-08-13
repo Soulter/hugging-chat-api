@@ -679,7 +679,7 @@ class ChatBot:
             "is_continue": False,
             "is_retry": is_retry,
             "web_search": web_search,
-            "tools": {}
+            "tools": []
         }
         headers = {
             'authority': 'huggingface.co',
