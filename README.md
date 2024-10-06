@@ -7,16 +7,12 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 [![PyPi](https://img.shields.io/pypi/v/hugchat.svg?logo=pypi&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![Support_Platform](https://img.shields.io/badge/3.6+-%234ea94b.svg?logo=python&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![DownloadsPW](https://img.shields.io/pypi/dw/hugchat?logo=download&logoColor=white)](https://pypi.python.org/pypi/hugchat)
-[![Status](https://img.shields.io/badge/status-operational-%234ea94b.svg?logo=ok&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![Downloads](https://static.pepy.tech/badge/hugchat?logo=download&logoColor=white)](https://www.pepy.tech/projects/hugchat)
-<a href="https://discord.gg/gq8kvUPe" target="_blank">
-        <img src="https://img.shields.io/discord/1248603579527331860?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb"
-            alt="chat on Discord"></a>
 
 > **Note**
 >
-> Some recent versions may no longer be fully backward compatible to some extent, a good idea is to review this README or issues promptly after any problem arise.
-> **Custom parameters(temprature, max_token, etc) is no longer supported**
+> For the personal reasons, the update of this repo will become slow, and we will ensure that the most basic features can be used normally
+> 
 > 
 > Recently new updates:
 > - Assistant(Image Generator, etc)
@@ -102,8 +98,6 @@ chatbot.delete_all_conversations()
 ```
 
 ### CLI
-
-> `version 0.0.5.2` or newer
 
 Simply run the following command in your terminal to start the CLI mode
 
