@@ -55,19 +55,18 @@ file_list = message_result.get_files_created() # must call wait_until_done() fir
 # tips: model "CohereForAI/c4ai-command-r-plus" can generate images :)
 
 # Stream response
-for resp in chatbot.query(
+for resp in chatbot.chat(
     "Hello",
     stream=True
 ):
     print(resp)
 
 # Web search
-query_result = chatbot.query("Hi!", web_search=True)
+query_result = chatbot.chat("Hi!", web_search=True)
 print(query_result)
 for source in query_result.web_search_sources:
     print(source.link)
     print(source.title)
-    print(source.hostname)
 
 # Create a new conversation
 chatbot.new_conversation(switch_to = True) # switch to the new conversation
