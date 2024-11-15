@@ -130,9 +130,11 @@ Commands in cli mode:
 
 - AI is an area of active research with known problems such as biased generation and misinformation. Do not use this application for high-stakes decisions or advice.
 - Server resources are precious, it is not recommended to request this API in a high frequency.
-(`Hugging Face's CTO🤗` just liked the suggestion)
-<div align="center"><img width=500 src="https://github.com/Soulter/hugging-chat-api/assets/37870767/06e64501-02fb-4d4a-ab6f-cf18d8638ace"></img></div>
 
+## Donations
+❤
+
+<a href="https://www.buymeacoffee.com/soulter" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="28" width="119"></a>
 
 ## Disclaimers
 
