@@ -410,8 +410,10 @@ class ChatBot:
             raise Exception(
                 f"Failed to get remote LLMs with status code: {r.status_code}"
             )
-
-        data = r.json()["nodes"][0]["data"]
+        
+        # temporary workaround for #267
+        text = r.text.split(r'{"type":"chunk","id":1,"data":[[]]}')[0]
+        data = json.loads(text)["nodes"][0]["data"]
         modelsIndices = data[data[0]["models"]]
         model_list = []
 
