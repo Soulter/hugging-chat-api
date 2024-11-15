@@ -412,7 +412,7 @@ class ChatBot:
             )
         
         # temporary workaround for #267
-        text = r.text.split(r'{"type":"chunk","id":1,"data":[[]]}')[0]
+        text = r.text.split("\n")[0]
         data = json.loads(text)["nodes"][0]["data"]
         modelsIndices = data[data[0]["models"]]
         model_list = []
