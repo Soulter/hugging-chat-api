@@ -395,7 +395,6 @@ class ChatBot:
 
     # Gives information such as name, websiteUrl, description, displayName, parameters, etc.
     # We can use it in the future if we need to get information about models
-
     def get_remote_llms(self) -> list:
         """
         Fetches all possible LLMs that could be used. Returns the LLMs in a list
@@ -411,70 +410,68 @@ class ChatBot:
             raise Exception(
                 f"Failed to get remote LLMs with status code: {r.status_code}"
             )
-
-        import json
+        
+        # temporary workaround for #267
+        text = r.text.split(r'{"type":"chunk","id":1,"data":[[]]}')[0]
+        data = json.loads(text)["nodes"][0]["data"]
+        modelsIndices = data[data[0]["models"]]
         model_list = []
-        try:
-            # Splitting the response text by lines or another delimiter if appropriate
-            lines = r.text.splitlines()
 
-            for line in lines:
-                try:
-                    # Attempt to load each line as JSON individually
-                    data = json.loads(line)["nodes"][0]["data"]
+        def return_data_from_index(
+            index): return None if index == -1 else data[index]
 
-                    # Rest of your processing with `data` as per your original logic
-                    modelsIndices = data[data[0]["models"]]
-                    def return_data_from_index(index): return None if index == -1 else data[index]
-                    
-                    for modelIndex in modelsIndices:
-                        model_data = data[modelIndex]
-                        if data[model_data["unlisted"]]:
-                            continue
+        for modelIndex in modelsIndices:
+            model_data = data[modelIndex]
 
-                        m = Model(
-                            id=return_data_from_index(model_data["id"]),
-                            name=return_data_from_index(model_data["name"]),
-                            displayName=return_data_from_index(model_data["displayName"]),
-                            preprompt=return_data_from_index(model_data["preprompt"]),
-                            websiteUrl=return_data_from_index(model_data["websiteUrl"]),
-                            description=return_data_from_index(model_data["description"]),
-                            datasetName=return_data_from_index(model_data["datasetName"]),
-                            datasetUrl=return_data_from_index(model_data["datasetUrl"]),
-                            modelUrl=return_data_from_index(model_data["modelUrl"]),
-                        )
+            # Model is unlisted, skip it
+            if data[model_data["unlisted"]]:
+                continue
 
-                        prompt_list = return_data_from_index(model_data["promptExamples"])
-                        if prompt_list is not None:
-                            _promptExamples = [return_data_from_index(index) for index in prompt_list]
-                            m.promptExamples = [
-                                {"title": data[prompt["title"]], "prompt": data[prompt["prompt"]]}
-                                for prompt in _promptExamples
-                            ]
+            m = Model(
+                id=return_data_from_index(model_data["id"]),
+                name=return_data_from_index(model_data["name"]),
+                displayName=return_data_from_index(model_data["displayName"]),
+                preprompt=return_data_from_index(model_data["preprompt"]),
+                # promptExamples = return_data_from_index(model_data["promptExamples"]),
+                websiteUrl=return_data_from_index(model_data["websiteUrl"]),
+                description=return_data_from_index(model_data["description"]),
+                datasetName=return_data_from_index(model_data["datasetName"]),
+                datasetUrl=return_data_from_index(model_data["datasetUrl"]),
+                modelUrl=return_data_from_index(model_data["modelUrl"]),
+                # parameters = return_data_from_index(model_data["parameters"]),
+            )
 
-                        indices_parameters_dict = return_data_from_index(model_data["parameters"])
-                        out_parameters_dict = {}
-                        for key, value in indices_parameters_dict.items():
-                            if value == -1:
-                                out_parameters_dict[key] = None
-                                continue
-                            if isinstance(data[value], list):
-                                out_parameters_dict[key] = [data[index] for index in data[value]]
-                                continue
-                            out_parameters_dict[key] = data[value]
+            prompt_list = return_data_from_index(model_data["promptExamples"])
+            if prompt_list is not None:
+                _promptExamples = [
+                    return_data_from_index(index) for index in prompt_list
+                ]
+                m.promptExamples = [
+                    {"title": data[prompt["title"]],
+                        "prompt": data[prompt["prompt"]]}
+                    for prompt in _promptExamples
+                ]
 
-                        m.parameters = out_parameters_dict
-                        model_list.append(m)
+            indices_parameters_dict = return_data_from_index(
+                model_data["parameters"])
+            out_parameters_dict = {}
+            for key, value in indices_parameters_dict.items():
+                if value == -1:
+                    out_parameters_dict[key] = None
+                    continue
 
-                except json.JSONDecodeError:
-                    # Skip or log the error for this specific line
-                    print(f"Skipping non-JSON or malformed line: {line}")
+                if isinstance(type(data[value]), list):
+                    out_parameters_dict[key] = [data[index]
+                                                for index in data[value]]
+                    continue
 
-        except Exception as e:
-            print("An error occurred while parsing:", e)
+                out_parameters_dict[key] = data[value]
+
+            m.parameters = out_parameters_dict
+
+            model_list.append(m)
 
         return model_list
-
 
     def get_remote_conversations(self, replace_conversation_list=True):
         """
