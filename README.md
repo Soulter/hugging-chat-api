@@ -88,9 +88,8 @@ info = chatbot.get_conversation_info()
 print(info.id, info.title, info.model, info.system_prompt, info.history)
 
 # Assistant
-assistant = chatbot.search_assistant(assistant_name="ChatGpt") # assistant name list in https://huggingface.co/chat/assistants
-assistant_list = chatbot.get_assistant_list_by_page(page=0)
-chatbot.new_conversation(assistant=assistant, switch_to=True) # create a new conversation with assistant
+ASSISTANT_ID = "66017fca58d60bd7d5c5c26c" # get the assistant id from https://huggingface.co/chat/assistants
+chatbot.new_conversation(assistant=ASSISTANT_ID, switch_to=True) # create a new conversation with assistant
 
 # [DANGER] Delete all the conversations for the logged in user
 chatbot.delete_all_conversations()

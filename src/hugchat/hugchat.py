@@ -166,7 +166,7 @@ class ChatBot:
         Create a new conversation. Return a conversation object. 
 
         modelIndex: int, get it from get_available_llm_models(). If None, use the default model.
-        assistant: str or Assistant, the assistant **id** or assistant object. Use search_assistant() to get the assistant object.
+        assistant: str or Assistant, the assistant **id**. Assistant id can be found in the assistant url, such as https://huggingface.co/chat/assistant/65bf2ddbf4017c8048ae43a3, the id is `65bf2ddbf4017c8048ae43a3`.
 
         - You should change the conversation by calling change_conversation() after calling this method. Or set param switch_to to True.
         - if you use assistant, the parameter `system_prompt` will be ignored.
@@ -488,17 +488,20 @@ class ChatBot:
             raise Exception(
                 f"Failed to get remote conversations with status code: {r.status_code}"
             )
+            
+        # temporary workaround for #267
+        line_ = r.text.splitlines()[1]
+        data = json.loads(line_)
 
-        data = r.json()["nodes"][0]["data"]
-        conversationIndices = data[data[0]["conversations"]]
+        conversationIndices = data['data'][0]
         conversations = []
 
         for index in conversationIndices:
-            conversation_data = data[index]
+            conversation_data = data['data'][index]
             c = Conversation(
-                id=data[conversation_data["id"]],
-                title=data[conversation_data["title"]],
-                model=data[conversation_data["model"]],
+                id=data['data'][conversation_data["id"]],
+                title=data['data'][conversation_data["title"]],
+                model=data['data'][conversation_data["model"]],
             )
 
             conversations.append(c)
@@ -611,20 +614,17 @@ class ChatBot:
         get assistant list by page number.
         if page < 0 or page > max_page then return `None`.
         '''
-        url_cache = f"https://api.soulter.top/hugchat/assistants/__data.json?p={page}"
         url = f"https://huggingface.co/chat/assistants/__data.json?p={page}&x-sveltekit-invalidated=01"
-        try:
-            res = requests.get(url_cache, timeout=5)
-        except BaseException:
-            res = self.session.get(url, timeout=10)
+        res = self.session.get(url, timeout=10)
         res = res.json()
         if res['nodes'][1]['type'] == 'error':
             return None
         # here we parse the result
         return self._parse_assistants(res['nodes'][1]['data'])
-
+    
     def search_assistant(self, assistant_name: str = None, assistant_id: str = None) -> Assistant:
         '''
+        [DEPRECATED]
         - If you created an assistant by your own, you should pass the assistant_id here but not the assistant_name. You can pass your assistant_id into the new_conversation() directly.
         - Search an available assistant by assistant name or assistant id.
         - Will search on api.soulter.top/hugchat because offifial api doesn't support search.
@@ -818,11 +818,3 @@ class ChatBot:
             conversation=conversation
         )
         return msg
-
-
-if __name__ == "__main__":
-    bot = ChatBot()
-    message_content = bot.chat("Hello")
-    print(message_content)
-    sharelink = bot.share_conversation()
-    print(sharelink)
