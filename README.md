@@ -1,8 +1,15 @@
 # hugging-chat-api
 
 English | [简体中文](README_cn.md)
+ 
+Unofficial HuggingChat Python API, extensible for chatbots etc. It supports:
 
-Unofficial HuggingChat Python API, extensible for chatbots etc.
+- Basic Chat
+- Assistant(Image Generator, [etc.](https://huggingface.co/chat/assistants))
+- Web search
+- Memorize context
+- [Switch LLMs](https://huggingface.co/chat/models)
+- ...
 
 [![PyPi](https://img.shields.io/pypi/v/hugchat.svg?logo=pypi&logoColor=white)](https://pypi.python.org/pypi/hugchat)
 [![Support_Platform](https://img.shields.io/badge/3.6+-%234ea94b.svg?logo=python&logoColor=white)](https://pypi.python.org/pypi/hugchat)
@@ -11,14 +18,7 @@ Unofficial HuggingChat Python API, extensible for chatbots etc.
 
 > **Note**
 >
-> For the personal reasons, the update of this repo will become slow, and we will ensure that the most basic features can be used normally
-> 
-> 
-> Recently new updates:
-> - Assistant(Image Generator, etc)
-> - Web search
-> - Memorize context
-> - Supports for changing LLMs
+> For the personal reasons, the update of this repo will become slow, and we will ensure that the most basic features can be used normally. Welcome Any PR!
 
 ## Installation
 ```bash
@@ -29,7 +29,28 @@ pip3 install hugchat
 
 ### API
 
+#### Minimal Example
+
+```py
+from hugchat import hugchat
+from hugchat.login import Login
+
+# Log in to huggingface and grant authorization to huggingchat
+# DO NOT EXPOSE YOUR EMAIL AND PASSWORD IN CODES, USE ENVIRONMENT VARIABLES OR CONFIG FILES
+EMAIL = "your email"
+PASSWD = "your password"
+cookie_path_dir = "./cookies/" # NOTE: trailing slash (/) is required to avoid errors
+sign = Login(EMAIL, PASSWD)
+cookies = sign.login(cookie_dir_path=cookie_path_dir, save_cookies=True)
+
+chatbot = hugchat.ChatBot(cookies=cookies.get_dict())
+
+print(chatbot.chat("Hi!").wait_until_done())
+```
+
+
 The following are all common usages of this repo, You may not necessarily use all of them, You can add or delete some as needed :)
+
 
 ```py
 from hugchat import hugchat
@@ -47,14 +68,12 @@ chatbot = hugchat.ChatBot(cookies=cookies.get_dict())  # or cookie_path="usercoo
 
 message_result = chatbot.chat("Hi!") # note: message_result is a generator, the method will return immediately.
 
-# Non stream
-message_str: str = message_result.wait_until_done() # you can also print(message_result) directly. 
+# Option 1: Non stream
+message_str: str = message_result.wait_until_done()
 # get files(such as images)
 file_list = message_result.get_files_created() # must call wait_until_done() first!
 
-# tips: model "CohereForAI/c4ai-command-r-plus" can generate images :)
-
-# Stream response
+# Option 2: Stream response
 for resp in chatbot.chat(
     "Hello",
     stream=True
@@ -62,11 +81,11 @@ for resp in chatbot.chat(
     print(resp)
 
 # Web search
-query_result = chatbot.chat("Hi!", web_search=True)
+query_result = chatbot.chat("How many models stored in huggingface?", web_search=True).wait_until_done()
 print(query_result)
-for source in query_result.web_search_sources:
-    print(source.link)
-    print(source.title)
+# You can get the web search results from the query result
+for source in query_result.get_search_sources():
+    print(source.link, source.title)
 
 # Create a new conversation
 chatbot.new_conversation(switch_to = True) # switch to the new conversation
@@ -76,9 +95,8 @@ conversation_list = chatbot.get_remote_conversations(replace_conversation_list=T
 # Get conversation list(local)
 conversation_list = chatbot.get_conversation_list()
 
-# Get the available models (not hardcore)
+# Get the available models
 models = chatbot.get_available_llm_models()
-
 # Switch model with given index
 chatbot.switch_llm(0) # Switch to the first model
 chatbot.switch_llm(1) # Switch to the second model

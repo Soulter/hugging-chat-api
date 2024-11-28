@@ -490,18 +490,20 @@ class ChatBot:
             )
             
         # temporary workaround for #267
-        line_ = r.text.splitlines()[1]
-        data = json.loads(line_)
+        line_ = r.text.splitlines()[0]
+        data = json.loads(line_)["nodes"][0]["data"]
 
-        conversationIndices = data['data'][0]
+        conversationIndices = data[data[0]["conversations"]]
+
         conversations = []
 
         for index in conversationIndices:
-            conversation_data = data['data'][index]
+            conversation_data = data[index]
+
             c = Conversation(
-                id=data['data'][conversation_data["id"]],
-                title=data['data'][conversation_data["title"]],
-                model=data['data'][conversation_data["model"]],
+                id=data[conversation_data["id"]],
+                title=data[conversation_data["title"]],
+                model=data[conversation_data["model"]],
             )
 
             conversations.append(c)
