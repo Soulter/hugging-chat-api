@@ -127,7 +127,7 @@ class Message(Generator):
 
             # set _result_text if this is the final iteration of the chat message
             if data_type == ResponseTypes.FINAL:
-                self._result_text = data["text"]
+                # self._result_text = data["text"]
                 self.msg_status = MessageStatus.RESOLVED
 
             # Handle web response type
@@ -156,6 +156,7 @@ class Message(Generator):
             # replace null characters with an empty string
             elif data_type == ResponseTypes.STREAM:
                 data["token"] = data["token"].replace('\u0000', '')
+                self._result_text += data["token"]
 
             elif "messageType" in data:
                 message_type: str = data["messageType"]

@@ -3,6 +3,7 @@ import json
 import os
 import datetime
 import logging
+import time
 import typing
 import traceback
 
@@ -698,9 +699,9 @@ class ChatBot:
             'sec-fetch-site': 'same-origin',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
         }
-        final_answer = {}
-
+        obj = {}
         break_flag = False
+        has_started = False
 
         while retry_count > 0:
             resp = self.session.post(
@@ -725,13 +726,23 @@ class ChatBot:
                         continue
                     res = line
                     obj = json.loads(res)
-                    if obj.__contains__("type"):
+                    if "type" in obj:
                         _type = obj["type"]
 
                         if _type == "finalAnswer":
-                            final_answer = obj
                             break_flag = True
                             break
+                        
+                        if _type == "status" and obj["status"] == "started":
+                            if has_started:
+                                obj = {
+                                    "type": "finalAnswer",
+                                    "text": ""
+                                }
+                                break_flag = True
+                                break
+                            has_started = True
+                        
                     else:
                         logging.error(f"No `type` found in response: {obj}")
                     yield obj
@@ -752,7 +763,7 @@ class ChatBot:
 
         # update the history of current conversation
         self.get_conversation_info(conversation)
-        yield final_answer
+        yield obj
 
     def query(self) -> Message:
         """
