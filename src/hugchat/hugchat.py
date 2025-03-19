@@ -664,7 +664,7 @@ class ChatBot:
     ) -> typing.Generator[dict, None, None]:
         if conversation is None:
             conversation = self.current_conversation
-
+    
         if retry_count <= 0:
             raise Exception(
                 "the parameter retry_count must be greater than 0.")
@@ -677,7 +677,7 @@ class ChatBot:
             message_id = conversation.history[-1].id
             
         logging.debug(f'message_id: {message_id}')
-
+    
         req_json = {
             "id": message_id,
             "inputs": text,
@@ -702,8 +702,14 @@ class ChatBot:
         obj = {}
         break_flag = False
         has_started = False
-
+    
+        initial_retry_count = retry_count  # Track initial retry count
+    
         while retry_count > 0:
+            # Update is_retry flag for subsequent attempts
+            if retry_count < initial_retry_count:
+                req_json["is_retry"] = True
+    
             resp = self.session.post(
                 self.hf_base_url + f"/chat/conversation/{conversation}",
                 files={ "data": (None, json.dumps(req_json)) },
@@ -712,14 +718,14 @@ class ChatBot:
                 cookies=self.session.cookies.get_dict(),
             )
             resp.encoding = 'utf-8'
-
+    
             if resp.status_code != 200:
-                
                 retry_count -= 1
                 if retry_count <= 0:
                     raise exceptions.ChatError(
                         f"Failed to chat. ({resp.status_code})")
-
+                continue  # Skip processing on non-200 status
+    
             try:
                 for line in resp.iter_lines(decode_unicode=True):
                     if not line:
@@ -728,7 +734,7 @@ class ChatBot:
                     obj = json.loads(res)
                     if "type" in obj:
                         _type = obj["type"]
-
+    
                         if _type == "finalAnswer":
                             break_flag = True
                             break
@@ -746,6 +752,8 @@ class ChatBot:
                     else:
                         logging.error(f"No `type` found in response: {obj}")
                     yield obj
+                # After processing all lines, mark completion
+                break_flag = True
             except requests.exceptions.ChunkedEncodingError:
                 pass
             except BaseException as e:
@@ -760,8 +768,8 @@ class ChatBot:
                 raise exceptions.ChatError(f"Failed to parse response: {res}")
             if break_flag:
                 break
-
-        # update the history of current conversation
+    
+        # Update the history of current conversation
         self.get_conversation_info(conversation)
         yield obj
 
