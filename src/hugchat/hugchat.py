@@ -298,8 +298,8 @@ class ChatBot:
 
         settings = {"": ("", "")}
 
-        r = self.session.post(
-            f"{self.hf_base_url}/chat/conversations?/delete",
+        r = self.session.delete(
+            f"{self.hf_base_url}/chat/api/conversations/",
             headers={"Referer": "https://huggingface.co/chat", "Origin": "https://huggingface.co", "Content-Type": "multipart/form-data; boundary=----WebKitFormBoundarywrIEW0Ame78HYisT"},
             cookies=self.get_cookies(),
             allow_redirects=True,
