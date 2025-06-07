@@ -15,6 +15,12 @@ class Model:
         datasetUrl: str = None,
         modelUrl: str = None,
         parameters: dict = None,
+        unlisted: bool = None,
+        logoUrl: str = None,
+        reasoning: bool = None,
+        multimodal: bool = None,
+        tools: bool = None,
+        hasInferenceAPI: bool = None,
     ):
         """
         Returns a model object
@@ -34,5 +40,15 @@ class Model:
         self.modelUrl: str = modelUrl
         self.parameters: dict = parameters
 
+        self.unlisted: bool = unlisted
+        self.logoUrl: str = logoUrl
+        self.reasoning: bool = reasoning
+        self.multimodal: bool = multimodal
+        self.tools: bool = tools
+        self.hasInferenceAPI: bool = hasInferenceAPI
+
     def __str__(self) -> str:
         return self.id
+
+    def display(self):
+        return f"id: {self.id}\nname:{self.name}\ndisplayName: {self.displayName}\npreprompt: {self.preprompt}\nwebsiteUrl: {self.websiteUrl}\ndescription: {self.description}\nmodelUrl: {self.modelUrl}\nparameters: {self.parameters}"
