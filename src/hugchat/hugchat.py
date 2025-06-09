@@ -401,8 +401,8 @@ class ChatBot:
         Fetches all possible LLMs that could be used. Returns the LLMs in a list
         """
 
-        r = self.session.post(
-            self.hf_base_url + "/chat/__data.json",
+        r = self.session.get(
+            self.hf_base_url + "/chat/api/v2/models",
             headers=self.get_headers(ref=False),
             cookies=self.get_cookies(),
         )
@@ -412,66 +412,49 @@ class ChatBot:
                 f"Failed to get remote LLMs with status code: {r.status_code}"
             )
         
-        # temporary workaround for #267
-        text = r.text.split("\n")[0]
-        data = json.loads(text)["nodes"][0]["data"]
-        modelsIndices = data[data[0]["models"]]
+
+        try:
+            models_data_list = json.loads(r.text)
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding JSON: {e}")
+            models_data_list = []
+
         model_list = []
 
-        def return_data_from_index(
-            index): return None if index == -1 else data[index]
-
-        for modelIndex in modelsIndices:
-            model_data = data[modelIndex]
-
-            # Model is unlisted, skip it
-            if data[model_data["unlisted"]]:
+        for model_data_dict in models_data_list:
+            if model_data_dict.get("unlisted", False): # Default to False if 'unlisted' key is missing
+                print(f"Skipping unlisted model: {model_data_dict.get('id', 'Unknown ID')}")
                 continue
-
             m = Model(
-                id=return_data_from_index(model_data["id"]),
-                name=return_data_from_index(model_data["name"]),
-                displayName=return_data_from_index(model_data["displayName"]),
-                preprompt=return_data_from_index(model_data["preprompt"]),
-                # promptExamples = return_data_from_index(model_data["promptExamples"]),
-                websiteUrl=return_data_from_index(model_data["websiteUrl"]),
-                description=return_data_from_index(model_data["description"]),
-                datasetName=return_data_from_index(model_data["datasetName"]),
-                datasetUrl=return_data_from_index(model_data["datasetUrl"]),
-                modelUrl=return_data_from_index(model_data["modelUrl"]),
-                # parameters = return_data_from_index(model_data["parameters"]),
+                id=model_data_dict.get("id"),
+                name=model_data_dict.get("name"),
+                displayName=model_data_dict.get("displayName"),
+                preprompt=model_data_dict.get("preprompt", ""),
+                websiteUrl=model_data_dict.get("websiteUrl"),
+                description=model_data_dict.get("description"),
+                modelUrl=model_data_dict.get("modelUrl"),
+                unlisted=model_data_dict.get("unlisted", False), # Also store this if needed
+                logoUrl=model_data_dict.get("logoUrl"),
+                reasoning=model_data_dict.get("reasoning"),
+                multimodal=model_data_dict.get("multimodal"),
+                tools=model_data_dict.get("tools"),
+                hasInferenceAPI=model_data_dict.get("hasInferenceAPI")
             )
 
-            prompt_list = return_data_from_index(model_data["promptExamples"])
-            if prompt_list is not None:
-                _promptExamples = [
-                    return_data_from_index(index) for index in prompt_list
-                ]
-                m.promptExamples = [
-                    {"title": data[prompt["title"]],
-                        "prompt": data[prompt["prompt"]]}
-                    for prompt in _promptExamples
-                ]
+            prompt_examples_list = model_data_dict.get("promptExamples")
+            if prompt_examples_list:
+                m.promptExamples = prompt_examples_list
+            else:
+                m.promptExamples = []
 
-            indices_parameters_dict = return_data_from_index(
-                model_data["parameters"])
-            out_parameters_dict = {}
-            for key, value in indices_parameters_dict.items():
-                if value == -1:
-                    out_parameters_dict[key] = None
-                    continue
+            parameters_dict = model_data_dict.get("parameters")
+            if parameters_dict:
+                m.parameters = parameters_dict
+            else:
+                m.parameters = {}
 
-                if isinstance(type(data[value]), list):
-                    out_parameters_dict[key] = [data[index]
-                                                for index in data[value]]
-                    continue
-
-                out_parameters_dict[key] = data[value]
-
-            m.parameters = out_parameters_dict
 
             model_list.append(m)
-
         return model_list
 
     def get_remote_conversations(self, replace_conversation_list=True):
@@ -514,6 +497,24 @@ class ChatBot:
 
         return conversations
 
+    def parse_datetime_to_timestamp(self, datetime_str):
+        if not datetime_str:
+            return None
+        try:
+            # Python 3.7+ can often handle 'Z' directly, but for older or more robust parsing:
+            if datetime_str.endswith('Z'):
+                datetime_str = datetime_str[:-1] + '+00:00' # Replace Z with UTC offset
+            dt_obj = datetime.datetime.fromisoformat(datetime_str)
+            # If it's timezone-naive, assume UTC. If timezone-aware, convert to UTC then get timestamp.
+            if dt_obj.tzinfo is None or dt_obj.tzinfo.utcoffset(dt_obj) is None:
+                 dt_obj = dt_obj.replace(tzinfo=datetime.timezone.utc) # Assume UTC if naive
+            else:
+                dt_obj = dt_obj.astimezone(datetime.timezone.utc)
+            return dt_obj.timestamp()
+        except ValueError as e:
+            print(f"Error parsing datetime string '{datetime_str}': {e}")
+            return None
+
     def get_conversation_info(self, conversation: Union[Conversation, str] = None) -> Conversation:
         """
         Fetches information related to the specified conversation. Returns the conversation object.
@@ -528,7 +529,7 @@ class ChatBot:
 
         r = self.session.get(
             self.hf_base_url +
-            f"/chat/conversation/{conversation.id}/__data.json?x-sveltekit-invalidated=01",
+            f"/chat/api/v2/conversations/{conversation.id}",
             headers=self.get_headers(ref=False),
             cookies=self.get_cookies(),
         )
@@ -539,41 +540,38 @@ class ChatBot:
             )
             
         # you'll never understand the following codes until you try to debug huggingchat in person.
-        data = r.json()["nodes"][1]["data"]
+        try:
+            data = r.json()
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to decode JSON: {e}")
+            return None
 
-        conversation.model = data[data[0]["model"]]
-        conversation.system_prompt = data[data[0]["preprompt"]]
-        conversation.title = data[data[0]["title"]]
+        conversation.model = data.get("model")
+        conversation.system_prompt = data.get("preprompt")
+        conversation.title = data.get("title")
 
-        messages: list = data[data[0]["messages"]]
+        messages_data_list = data.get("messages", [])
         conversation.history = []
 
-        # parse all message nodes (history) in the conversation
-        for index in messages:  # node's index
-            _node_meta = data[index]
-            # created_at and updated_at may not in the metadata of a message node.
-            created_at = datetime.datetime.strptime(
-                    data[_node_meta["createdAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() if 'createdAt' in _node_meta else None
-            updated_at = datetime.datetime.strptime(
-                    data[_node_meta["updatedAt"]][1], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp() if 'updatedAt' in _node_meta else None
-            ancestors = []
-            children = []
-            for a_idx in data[_node_meta["ancestors"]]:
-                ancestors.append(data[a_idx])
-            for c_idx in data[_node_meta["children"]]:
-                children.append(data[c_idx])
+        for msg_data_dict in messages_data_list:
+            created_at_ts = self.parse_datetime_to_timestamp(msg_data_dict.get("createdAt"))
+            updated_at_ts = self.parse_datetime_to_timestamp(msg_data_dict.get("updatedAt"))
+            ancestor_ids = msg_data_dict.get("ancestors", [])
+            children_ids = msg_data_dict.get("children", [])
+
             conversation.history.append(MessageNode(
-                id=data[_node_meta["id"]],
-                role=data[_node_meta["from"]],
-                content=data[_node_meta["content"]],
-                ancestors=ancestors,
-                children=children,
-                created_at=created_at,
-                updated_at=updated_at,
+                id=msg_data_dict.get("id"),
+                role=msg_data_dict.get("from"),
+                content=msg_data_dict.get("content"),
+                ancestors=ancestor_ids, # Storing IDs
+                children=children_ids,   # Storing IDs
+                created_at=created_at_ts,
+                updated_at=updated_at_ts
             ))
 
-        logging.debug(
-            f"conversation {conversation.id} history: {conversation.history}")
+        logging.debug(f"Conversation {conversation.id} history (count): {len(conversation.history)}")
+        if conversation.history:
+            logging.debug(f"First message in history: {conversation.history[0]}")
 
         return conversation
 
