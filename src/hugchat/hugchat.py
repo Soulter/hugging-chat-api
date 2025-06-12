@@ -414,7 +414,7 @@ class ChatBot:
         
 
         try:
-            models_data_list = json.loads(r.text)
+            models_data_list = json.loads(r.text)['json']
         except json.JSONDecodeError as e:
             logging.error(f"Error decoding JSON: {e}")
             models_data_list = []
@@ -541,7 +541,7 @@ class ChatBot:
             
         # you'll never understand the following codes until you try to debug huggingchat in person.
         try:
-            data = r.json()
+            data = r.json()['json']
         except json.JSONDecodeError as e:
             logging.error(f"Failed to decode JSON: {e}")
             return None
